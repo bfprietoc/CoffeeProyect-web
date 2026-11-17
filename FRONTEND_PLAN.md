@@ -20,6 +20,7 @@ bajo. Ver sección [Despliegue](#despliegue--self-hosted-en-mini-pc).
 |---|---|---|
 | Framework | **Next.js (App Router) + TypeScript** | SSG/ISR para SEO de las fichas de café, ecosistema grande, self-hosteable con Docker (sin dependencia de serverless) |
 | Estilos | **Tailwind CSS** | Rápido de iterar, consistente, sin CSS sprawl |
+| Componentes UI | **shadcn/ui** (sobre Tailwind) | Estándar 2026 en apps Next.js: componentes accesibles que se copian al codebase (sin dependencia externa) y se personalizan a la marca |
 | Server state | **TanStack Query** | Cacheo, refetch y mutaciones del lado cliente; complementa el cache de Redis del backend |
 | Client state | **Zustand** (carrito, sesión) | Mínimo boilerplate para este tamaño de app |
 | API client | **fetch wrapper propio + tipos TS a mano** | El backend no expone OpenAPI; los tipos espejan `internal/domain` (ver riesgo 2) |
@@ -139,7 +140,7 @@ manual con el comando de arriba (o un `deploy.sh` que lo envuelva).
 ## Fases
 
 ### Fase 0 — Scaffold (1–2 días)
-- `create-next-app` + TS + Tailwind + ESLint/Prettier
+- `create-next-app` + TS + Tailwind + ESLint/Prettier + shadcn/ui
 - Repo en GitHub + CI (lint, typecheck, build)
 - `lib/api`: client con interceptors (inyectar `Authorization`, `X-Session-ID`;
   en 401 → intentar refresh → reintentar la request una vez)
