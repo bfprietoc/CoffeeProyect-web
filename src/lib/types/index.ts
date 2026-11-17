@@ -1,0 +1,22 @@
+export * from "./auth";
+export * from "./cart";
+export * from "./checkout";
+export * from "./coffee";
+export * from "./order";
+export * from "./stock";
+export * from "./user";
+export * from "./waitlist";
+
+/** Códigos de error que devuelve el backend en `{ "error": ..., "code": ... }`. */
+export type ApiErrorCode =
+  | "NOT_FOUND"
+  | "UNAUTHORIZED"
+  | "EMAIL_CONFLICT"
+  | "BAD_REQUEST"
+  | "UNAVAILABLE"
+  | "INTERNAL_ERROR";
+
+export interface ApiErrorBody {
+  error: string;
+  code?: ApiErrorCode;
+}
