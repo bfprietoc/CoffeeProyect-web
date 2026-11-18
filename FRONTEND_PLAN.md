@@ -139,7 +139,7 @@ manual con el comando de arriba (o un `deploy.sh` que lo envuelva).
 
 ## Fases
 
-### Fase 0 — Scaffold (1–2 días)
+### Fase 0 — Scaffold (1–2 días) ✅
 - `create-next-app` + TS + Tailwind + ESLint/Prettier + shadcn/ui
 - Repo en GitHub + CI (lint, typecheck, build)
 - `lib/api`: client con interceptors (inyectar `Authorization`, `X-Session-ID`;
@@ -148,7 +148,7 @@ manual con el comando de arriba (o un `deploy.sh` que lo envuelva).
   `Order`/`OrderItem`, `WaitlistEntry`, `ValidationResult`
 - Smoke: `/health` + render del listado de cafés
 
-### Fase 1 — Catálogo público (read-only)
+### Fase 1 — Catálogo público (read-only) ✅
 - Home + lista con filtros (`roast_level`, `country`, `process`,
   `available=true`) y paginación (`page`/`limit`, máx 50)
 - Ficha de detalle: producer, farm, notas de cata, precio, stock
@@ -212,3 +212,47 @@ manual con el comando de arriba (o un `deploy.sh` que lo envuelva).
 Cada fase termina con: CI verde, los flujos de la fase cubiertos por tests
 (componentes + al menos un E2E manual documentado), y el flujo correspondiente
 de la batería E2E del backend pasando contra el front real.
+
+## Registro de E2E manuales
+
+Flujos probados a mano contra el backend real (`:8080`) con datos de dev.
+Precondición: backend corriendo + `npm run dev` (o build de prod en `:3001`).
+
+### Fase 1 — Catálogo público (probado 2026-11-17)
+
+**1. Home (`/`)**
+- Se ve el hero + "Nuestros cafés" con los 4 cafés disponibles (el agotado
+  no aparece). Todo renderizado en el HTML inicial (SSR/prerender).
+- "Ver catálogo" y "Ver todos →" navegan a `/coffees`.
+
+**2. Listado + filtros (`/coffees`)**
+- Grilla con las 5 fichas; cada tarjeta enlaza a su detalle.
+- Filtro `process=washed` → 2 resultados (El Paraíso 92, Finca La Esperanza).
+- Filtro `roast_level=dark` → 1 resultado (Antioquia Dark Roast Blend).
+- Checkbox "Solo disponibles" → 4 resultados (quita el agotado).
+- Cambiar un filtro reinicia la paginación a página 1 y actualiza la URL
+  (transición de cliente, sin recarga). "Limpiar filtros" vuelve a `/coffees`.
+- Filtro sin resultados (p. ej. `process=honey&roast_level=dark`) → estado
+  vacío con CTA "Ver todo el catálogo".
+
+**3. Ficha de detalle (`/coffees/{id}`)**
+- Café disponible: productor, finca/región/país, proceso, tostado, notas de
+  cata, descripción, bolsa (g), precio COP y badge de stock. Botón "Agregar
+  al carrito" deshabilitado (Fase 2).
+- Café agotado: badge "Agotado" + formulario de waitlist.
+
+**4. Waitlist (café agotado)**
+- Correo inválido → error de validación en cliente, sin llamada a la API.
+- Correo válido → `POST /waitlist` 201, la UI muestra "¡Listo! Te avisaremos
+  cuando {café} vuelva a estar disponible." (verificado en DB: entry creada).
+
+**5. Estados de error y 404**
+- Backend caído (`:8080` detenido) → `/coffees` muestra el error boundary con
+  "Reintentar" (que recupera al volver el backend); la home degrada a sección
+  de destacados vacía sin tumbar la página.
+- ID inexistente → UI "Café no encontrado" (soft-404: HTTP 200 + contenido
+  stream, comportamiento documentado de PPR en esta Next.js; ver nota en
+  `src/app/(public)/coffees/[id]/page.tsx`).
+
+**Tests automatizados de la fase:** `npm test` (20 tests: format, CoffeeCard,
+WaitlistForm, Pagination, CoffeeFilters) + CI (lint, typecheck, test, build).
