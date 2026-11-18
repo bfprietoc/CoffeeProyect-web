@@ -13,6 +13,7 @@ export type ApiErrorCode =
   | "UNAUTHORIZED"
   | "EMAIL_CONFLICT"
   | "BAD_REQUEST"
+  | "INVALID_INPUT"
   | "UNAVAILABLE"
   | "INTERNAL_ERROR";
 
