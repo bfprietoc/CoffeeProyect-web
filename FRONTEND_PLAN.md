@@ -161,7 +161,7 @@ manual con el comando de arriba (o un `deploy.sh` que lo envuelva).
 - Register / login / refresh automático
 - Merge del carrito invitado al login (el usuario ve su carrito fusionado)
 
-### Fase 3 — Checkout y órdenes
+### Fase 3 — Checkout y órdenes ✅
 - Selección o creación de dirección → `GET /checkout/validate` (muestra stock
   disponible por ítem y total) → `POST /orders`
 - Historial + detalle; cancelación solo en `confirmed`/`processing`
@@ -295,4 +295,71 @@ los árboles ocultos de Activity.
 **Tests automatizados de la fase:** `npm test` (46 tests: + cart hooks,
 AddToCart, QuantityStepper, HeaderActions, página /cart, login, register —
 incluye 2 tests de regresión del reset post-submit) + CI (lint, typecheck,
+test, build).
+
+### Fase 3 — Checkout y órdenes (probado 2026-11-19)
+
+Método: Chromium headless vía CDP (`/tmp/opencode/e2e-fase3.cjs`, reproducible
+con `node e2e-fase3.cjs`) contra build de prod en `:3001` + backend real en
+`:8080`, con perfil de browser limpio. 24 checks, café de prueba "El Paraíso
+92" ($ 85.000, stock 12 en dev).
+
+**1. Invitado: gates de sesión**
+- `/checkout` y `/orders` → "Inicia sesión para continuar." con links
+  `/login?next=…` y `/register?next=…` (la ruta de origen se preserva).
+
+**2. Registro y carrito**
+- Registro → header saluda "Hola, E2E Fase 3"; ficha de café → "Agregar al
+  carrito" → "Agregado ✓".
+
+**3. Checkout (`/checkout`)**
+- Sin direcciones guardadas → hint "Aún no tienes direcciones guardadas."
+- "Agregar nueva dirección" → formulario (etiqueta, calle, ciudad,
+  departamento, país default CO) → "Guardar dirección" (POST
+  `/users/me/addresses`). La nueva dirección queda seleccionada por radio y
+  marcada "Predeterminada" (era la primera).
+- `GET /checkout/validate` → por ítem: "Cantidad: 1 · Stock disponible: 12"
+  + "Disponible ✓"; total $ 85.000.
+- "Confirmar pedido" (POST `/orders` con la dirección) → navega a
+  `/orders/{id}`.
+
+**4. Detalle (`/orders/{id}`)**
+- Estado "Confirmado", ítem con cantidad y precio, dirección de envío
+  ("Cra 1 #2-3, Medellín, Antioquia · CO"), total $ 85.000.
+
+**5. Historial (`/orders`)**
+- Lista la orden (id corto, fecha, "1 ítem", badge de estado, total) con
+  link "Ver detalle".
+
+**6. Cancelación (dos pasos) + carrito vaciado**
+- "Cancelar pedido" → confirmación inline "¿Cancelar este pedido?" →
+  "Sí, cancelar" (POST `/orders/{id}/cancel`) → badge cambia a "Cancelado"
+  y el botón de cancelar desaparece (estado no cancelable).
+- El carrito quedó vacío tras el pedido ("Tu carrito está vacío.").
+
+**7. Estado no cancelable (puerta 422 del backend)**
+- 2ª orden con la dirección ya guardada (queda preseleccionada, predeterminada).
+- `PATCH /admin/orders/{id}/status` (API key) → `shipped` + guía
+  "GUIA-E2E-42" → el detalle muestra "Enviado", la guía, y **sin** botón de
+  cancelar (el backend respondería 422 `UNAVAILABLE`).
+
+**Hallazgos (bugs corregidos en la fase):**
+1. **Bootstrap de sesión tras recarga:** el access token vive en memoria y
+   solo se restauraba ante un 401; tras una recarga completa el usuario
+   quedaba "deslogueado" (carrito invitado, gates de login en
+   `/checkout`/`/orders`). Corrección: `Providers` llama a `refreshTokens()`
+   en mount si no hay access token pero sí refresh en localStorage (ver
+   `src/components/providers.tsx` + 3 tests).
+2. **Build Next 16 (Cache Components):** `use(params)` en client page fuera
+   de `<Suspense>` rompe el build ("blocking-prerender-dynamic"); se envuelve
+   con un boundary y `/orders/[id]` quedó `◐ Partial Prerender`.
+3. **Testing de params en jsdom:** el retry de suspensión no se flusha en
+   este entorno (React 19.3 + jsdom, verificado con probes). En tests se usa
+   `resolvedParams()` (`src/test/utils.tsx`): Promise pre-marcada
+   `status:"fulfilled"` + `value`, que es lo que Next hace en prod y lo que
+   `use()` lee de forma síncrona (`resolveThenable`).
+
+**Tests automatizados de la fase:** `npm test` (83 tests: + address form,
+address selector, validation summary, order status badge, cancel button,
+páginas /checkout, /orders, /orders/[id], providers) + CI (lint, typecheck,
 test, build).

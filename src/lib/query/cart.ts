@@ -11,19 +11,11 @@ import {
   removeCartItem,
   setCartItemQuantity,
 } from "@/lib/api/endpoints";
+import { useMounted } from "@/lib/hooks/use-mounted";
 
 /** Claves de query compartidas (cart + usuario actual). */
 export const cartKey = ["cart"] as const;
 export const meKey = ["me"] as const;
-
-/**
- * true solo en el cliente (snapshot de servidor = false). El carrito solo se
- * pide en el cliente: X-Session-ID vive en localStorage.
- */
-const noopSubscribe = () => () => {};
-function useMounted(): boolean {
-  return useSyncExternalStore(noopSubscribe, () => true, () => false);
-}
 
 /** Token en memoria: distingue carrito de invitado del de usuario. */
 function useSessionToken(): string | null {

@@ -10,6 +10,7 @@ import {
   useRemoveCartItem,
   useSetCartItemQuantity,
 } from "@/lib/query/cart";
+import { useIsAuthenticated } from "@/lib/query/orders";
 
 export default function CartPage() {
   const cart = useCart();
@@ -71,6 +72,7 @@ function CartItems({
   const setQuantity = useSetCartItemQuantity();
   const removeItem = useRemoveCartItem();
   const clearCart = useClearCart();
+  const authed = useIsAuthenticated();
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-10">
@@ -127,10 +129,9 @@ function CartItems({
           <Button variant="outline" onClick={() => clearCart.mutate()}>
             Vaciar carrito
           </Button>
-          {/* Checkout llega en Fase 3 */}
-          <Button disabled title="El checkout llega pronto">
-            Ir a pagar
-          </Button>
+          <Link href={authed ? "/checkout" : "/login?next=/checkout"}>
+            <Button>Ir a pagar</Button>
+          </Link>
         </div>
       </div>
 
