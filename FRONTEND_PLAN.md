@@ -188,8 +188,18 @@ manual con el comando de arriba (o un `deploy.sh` que lo envuelva).
 ### Fase 6 — Pulido y deploy self-hosted
 - ✅ Responsive, metadata/OG por café (SEO), accesibilidad básica
   (ver "Fase 6 — Pulido" en el registro de E2E, 2026-11-19)
-- Playwright E2E contra el backend real (subconjunto de la batería de 126
-  aserciones: catálogo, carrito invitado, merge, checkout, cancel)
+- ✅ Playwright E2E contra el backend real (commit `b6c655d`, 2026-11-19):
+  13 tests en `e2e/` (catálogo + not-found, carrito invitado, auth + merge
+  en login, checkout completo, cancelación con restitución de stock por
+  API). Workflow `.github/workflows/e2e.yml` separado del CI rápido: levanta
+  postgres+redis (services), backend Go (checkout de `bfprietoc/CoffeeProyect`
+  `develop`, auto-migra al arrancar) + seed idempotente, `next start :3001`;
+  CI verde en 1m52s (13 passed). Fix que exigió el E2E: la ficha de café
+  inexistente mostraba el error boundary en vez del not-found de la ruta —
+  con PPR, `notFound()` lanzado desde un catch no es fiable (el error se
+  sanitiza entre pases de render); ahora `getCoffeeByIdOrNull` resuelve
+  `null` ante 404 y la página llama `notFound()` en el flujo normal
+  (patrón documentado en `not-found.md` del Next instalado)
 - Dockerfile multi-stage de Next.js (build → `next start`)
 - `docker-compose.prod.yml` en la mini PC (web + api + postgres + redis +
   caddy) — ver sección Despliegue
