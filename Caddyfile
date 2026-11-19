@@ -1,0 +1,20 @@
+# Caddy — única puerta de entrada del stack (:80).
+#
+# El TLS lo resuelve la capa de acceso: Tailscale (HTTPS del tailnet,
+# `tailscale serve`) o Cloudflare Tunnel (HTTPS automático). Caddy queda en
+# HTTP puro detrás de esa puerta. Si algún día se quiere dominio directo sin
+# CF/Tailscale: reemplazar ":80" por "https://tudominio.com" y Caddy obtiene
+# el certificado solo (ACME).
+
+:80 {
+	# Backend Go. El front llama a /api/... relativo → sin CORS en prod.
+	# strip_prefix: la API no conoce el prefijo /api (sus rutas son /coffees,
+	# /auth/..., etc.).
+	handle /api/* {
+		uri strip_prefix /api
+		reverse_proxy api:8080
+	}
+
+	# Next.js.
+	reverse_proxy web:3000
+}

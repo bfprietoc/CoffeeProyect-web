@@ -37,6 +37,10 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+!.env.production.example
+
+# backups de pg_dump (deploy.sh) — nunca al repo
+/backups/
 
 # vercel
 .vercel

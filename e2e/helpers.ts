@@ -7,11 +7,14 @@ export const COFFEE = {
   priceRe: /\$\s85\.000/,
 };
 
-/** Datos del café de prueba desde la API del backend (:8080). */
+/** Base de la API para los asserts directos (stock). En CI y dev es :8080. */
+const API_BASE = process.env.E2E_API_URL ?? "http://localhost:8080";
+
+/** Datos del café de prueba desde la API del backend. */
 export async function getTestCoffee(
   page: Page,
 ): Promise<{ id: string; stockBags: number }> {
-  const res = await page.request.get("http://localhost:8080/coffees?limit=50");
+  const res = await page.request.get(`${API_BASE}/coffees?limit=50`);
   const coffees: { id: string; name: string; stock_bags: number }[] =
     await res.json();
   const coffee = coffees.find((c) => c.name === COFFEE.name);
