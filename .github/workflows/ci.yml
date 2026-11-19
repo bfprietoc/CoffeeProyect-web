@@ -17,6 +17,9 @@ jobs:
           cache: npm
 
       - run: npm ci
+      # PageProps/LayoutProps son tipos globales que Next genera en .next/types;
+      # sin un dev/build previo (checkout limpio) el typecheck fallaría.
+      - run: npm run typegen
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
