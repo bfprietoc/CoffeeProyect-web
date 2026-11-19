@@ -167,7 +167,7 @@ manual con el comando de arriba (o un `deploy.sh` que lo envuelva).
 - Historial + detalle; cancelación solo en `confirmed`/`processing`
   (el backend devuelve 422 si no es cancelable)
 
-### Fase 4 — Cuenta
+### Fase 4 — Cuenta ✅
 - Perfil (nombre) + CRUD de direcciones con `is_default`
 
 ### Fase 5 — Panel admin
@@ -407,3 +407,58 @@ cancelada sí devolvió la suya (neto 0). Tras el cleanup, stock restaurado a
 los chunks SSR de forma lazy y las rutas `◐` se quedan en skeleton con
 `ChunkLoadError` (digest 2413310770). Fix: rebuild + restart por PID (el
 proceso se titula `next-server`; `pkill` no lo toma).
+
+### Fase 4 — Cuenta (probado 2026-11-19)
+
+Método: Chromium headless vía CDP (`/tmp/opencode/e2e-fase4.cjs`, reproducible
+con `node e2e-fase4.cjs`) contra build de prod en `:3001` + backend real en
+`:8080`, con perfil de browser limpio. 14 checks.
+
+**1. Registro y `/account` (perfil)**
+- Registro → header saluda "Hola, E2E Fase 4".
+- `/account` → sección "Perfil": input de nombre con el valor actual, correo
+  **de solo lectura** (disabled; el backend no expone cambio de email/clave),
+  botón "Guardar cambios" deshabilitado sin cambios.
+- Sección "Direcciones": estado vacío "Aún no tienes direcciones guardadas."
+  + CTA "Agregar dirección".
+
+**2. Crear direcciones con `is_default`**
+- "Agregar dirección" → formulario (el mismo `AddressForm` del checkout, con
+  checkbox "Dirección predeterminada") → guardar → la dirección aparece en la
+  lista con badge "Predeterminada" (único).
+- 2ª dirección sin marcar default → aparece sin badge; sigue habiendo
+  exactamente 1 default (el backend desmarca la anterior al crear una nueva).
+
+**3. Eliminar (dos pasos, inline en la fila)**
+- "Eliminar" → "¿Eliminar esta dirección?" + "Sí, eliminar"/"Volver" (mismo
+  patrón que la cancelación de pedidos) → la fila desaparece; la default
+  intacta.
+
+**4. Rename de perfil → header sin recarga**
+- Cambiar el nombre + "Guardar cambios" → feedback "Perfil guardado ✓" y el
+  header actualiza a "Hola, {nuevo nombre}" **sin recarga** (invalidación de
+  la query `me` compartida con el header).
+
+**5. Recarga completa + navegación**
+- Reload de `/account` → sesión restaurada (bootstrap de Fase 3) con el nombre
+  nuevo persistido en el input.
+- Header autenticado: link "Mi cuenta" → `/account`.
+
+**Hallazgos:**
+1. **Contrato del backend (limitación documentada):** no existe endpoint de
+   edición de direcciones ni de cambio de default en una existente —
+   `is_default` solo se fija al crear (`POST /users/me/addresses`; el backend
+   desmarca las anteriores en `UserStore.AddAddress`). El front implementa
+   C/R/D + default al crear. Follow-up backend opcional: `PATCH
+   /users/me/addresses/{id}`. Las órdenes guardan snapshot de la dirección
+   (sin FK), así que borrar una no afecta pedidos pasados.
+2. **Cosmético (Fase 6):** el link "Mi cuenta" del header hace wrap a dos
+   líneas en 390px.
+
+**Revisión visual:** 6 screenshots (gate invitado, cuenta vacía, form de
+dirección, dos direcciones con badge, confirmación de eliminación inline,
+móvil 390px) — todas OK.
+
+**Tests automatizados de la fase:** `npm test` (98 tests: + hooks account
+[invalidación de `me` y `addresses`], profile-form, address-list, página
+/account) + CI (lint, typecheck, test, build).

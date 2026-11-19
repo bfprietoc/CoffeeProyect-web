@@ -7,6 +7,11 @@ export interface User {
   created_at: string; // RFC3339 (time.Time)
 }
 
+/** Respuesta de GET /users/me — el backend incluye las direcciones. */
+export interface UserProfile extends User {
+  addresses: Address[];
+}
+
 export interface Address {
   id: string;
   user_id: string;

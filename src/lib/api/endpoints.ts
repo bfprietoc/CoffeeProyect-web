@@ -19,6 +19,7 @@ import type {
   UpdateCoffeeRequest,
   UpdateOrderStatusRequest,
   User,
+  UserProfile,
   ValidationResult,
   WaitlistEntry,
 } from "@/lib/types";
@@ -63,7 +64,7 @@ export const clearCart = () => api.delete<Cart>("/cart");
 
 // ---------- user (JWT) ----------
 
-export const getMe = () => api.get<User>("/users/me");
+export const getMe = () => api.get<UserProfile>("/users/me");
 
 export const updateMe = (body: { name: string }) => api.put<User>("/users/me", body);
 

@@ -2,16 +2,22 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 /**
- * Gate para rutas que requieren sesión (checkout, órdenes): invita a
- * ingresar o registrarse preservando la ruta de origen en `next`.
+ * Gate para rutas que requieren sesión (checkout, órdenes, cuenta): invita
+ * a ingresar o registrarse preservando la ruta de origen en `next`.
  */
+const PURPOSES: Record<string, string> = {
+  "/checkout": "comprar",
+  "/orders": "ver tus pedidos",
+  "/account": "gestionar tu cuenta",
+};
+
 export function LoginPrompt({ next }: { next: string }) {
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-10">
       <div className="mt-6 rounded-lg border p-10 text-center">
         <p className="font-medium">Inicia sesión para continuar.</p>
         <p className="mt-1 text-sm text-muted-foreground">
-          Necesitas una cuenta para {next === "/checkout" ? "comprar" : "ver tus pedidos"}.
+          Necesitas una cuenta para {PURPOSES[next] ?? "continuar"}.
         </p>
         <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
           <Link href={`/login?next=${encodeURIComponent(next)}`}>
