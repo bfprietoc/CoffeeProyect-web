@@ -2,10 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ApiError } from "@/lib/api/client";
 import { formatPrice, processLabel, roastLabel } from "@/lib/format";
-import { getCoffeeById } from "@/lib/server/coffees";
-import type { Coffee } from "@/lib/types";
+import { getCoffeeByIdOrNull } from "@/lib/server/coffees";
 import { Badge } from "@/components/ui/badge";
 import { AddToCart } from "@/components/cart/add-to-cart";
 import { StockBadge } from "@/components/catalog/stock-badge";
@@ -16,13 +14,8 @@ async function CoffeeDetail({
 }: Pick<PageProps<"/coffees/[id]">, "params">) {
   const { id } = await params;
 
-  let coffee: Coffee;
-  try {
-    coffee = await getCoffeeById(id);
-  } catch (err) {
-    if (err instanceof ApiError && err.code === "NOT_FOUND") notFound();
-    throw err; // otra falla → error boundary de la ruta
-  }
+  const coffee = await getCoffeeByIdOrNull(id);
+  if (!coffee) notFound();
   // Nota: con Cache Components (PPR) el shell se envía antes de que corra
   // notFound(), así que una ficha inexistente responde 200 con la UI de
   // not-found streaméada ("soft 404", comportamiento documentado en
@@ -128,7 +121,8 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const { id } = await props.params;
   try {
-    const coffee = await getCoffeeById(id);
+    const coffee = await getCoffeeByIdOrNull(id);
+    if (!coffee) return {}; // 404: metadata por defecto del layout.
     return {
       title: coffee.name,
       description: coffee.description,
@@ -139,7 +133,7 @@ export async function generateMetadata(
       },
     };
   } catch {
-    // 404 o API caída: se queda con la metadata por defecto del layout.
+    // API caída: se queda con la metadata por defecto del layout.
     return {};
   }
 }

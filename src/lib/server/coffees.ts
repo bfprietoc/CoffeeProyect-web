@@ -1,4 +1,5 @@
 import { cacheLife } from "next/cache";
+import type { ApiError } from "@/lib/api/client";
 import { getCoffee, listCoffees } from "@/lib/api/endpoints";
 import type { Coffee, CoffeeFilters, CoffeePagination } from "@/lib/types";
 
@@ -35,11 +36,29 @@ export async function getFeaturedCoffees(limit = 6): Promise<Coffee[]> {
   }
 }
 
-/** Ficha de un café (GET /coffees/{id}). Lanza ApiError(404) si no existe. */
-export async function getCoffeeById(id: string): Promise<Coffee> {
+/**
+ * Ficha de un café (GET /coffees/{id}). Devuelve `null` si no existe (404).
+ *
+ * El 404 NO se lanza como error: en PPR la capa de Server Components
+ * sanitiza los errores entre pases de render (el error original se reemplaza
+ * por un genérico "An error occurred in the Server Components render"), y
+ * lanzar `notFound()` desde un catch no es fiable. Con `null` la decisión
+ * vive en el flujo normal del render, como documenta notFound.md:
+ * "The idiomatic place for the check is the data-access function itself".
+ */
+export async function getCoffeeByIdOrNull(id: string): Promise<Coffee | null> {
   "use cache";
   cacheLife("minutes");
-  return getCoffee(id);
+  try {
+    return await getCoffee(id);
+  } catch (err) {
+    // Duck typing: en RSC `instanceof ApiError` no es fiable (Turbopack
+    // puede duplicar el módulo entre el grafo RSC y el de componentes
+    // cliente). En /coffees/{id} un 404 siempre es "café inexistente".
+    const e = err as Partial<ApiError> | null;
+    if (e && e.name === "ApiError" && e.status === 404) return null;
+    throw err; // otra falla (API caída, etc.) → error boundary de la ruta
+  }
 }
 
 /** Valores distintos para poblar los filtros (país, proceso, tostado). */

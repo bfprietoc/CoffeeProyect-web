@@ -1,0 +1,102 @@
+name: E2E
+
+# E2E de Playwright contra el stack real: postgres + redis (services),
+# backend Go (auto-migra al arrancar) + seed, y Next.js (`next start`).
+# Separado del CI rápido (lint/typecheck/test/build) por el peso del job.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: coffeedb
+          POSTGRES_USER: coffee
+          POSTGRES_PASSWORD: coffee
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U coffee -d coffeedb"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://coffee:coffee@localhost:5432/coffeedb?sslmode=disable
+      REDIS_URL: redis://localhost:6379
+    steps:
+      - uses: actions/checkout@v4
+
+      # Backend (mismo owner; el job migra la DB solo con DATABASE_URL).
+      - name: Checkout backend
+        uses: actions/checkout@v4
+        with:
+          repository: bfprietoc/CoffeeProyect
+          ref: develop
+          path: backend
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+
+      - name: Build + start backend
+        working-directory: backend
+        run: |
+          go build -o coffee-api .
+          JWT_SECRET=e2e-secret ADMIN_API_KEY=e2e-admin-key PORT=8080 \
+            nohup ./coffee-api > backend.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8080/health > /dev/null && exit 0
+            sleep 1
+          done
+          echo "backend no respondió"; cat backend.log; exit 1
+
+      # Catálogo de prueba (idempotente, ON CONFLICT DO NOTHING).
+      - name: Seed coffees
+        run: PGPASSWORD=coffee psql -h 127.0.0.1 -U coffee -d coffeedb -f backend/migrations/seed.sql
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build + start web
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8080
+          NEXT_PUBLIC_SITE_URL: http://localhost:3001
+        run: |
+          npm run build
+          nohup npx next start -p 3001 > web.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3001/ > /dev/null && exit 0
+            sleep 1
+          done
+          echo "web no respondió"; cat web.log; exit 1
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Run E2E
+        run: npx playwright test
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14

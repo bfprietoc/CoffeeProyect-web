@@ -1,12 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { ApiError } from "@/lib/api/client";
-import { getCoffeeById } from "@/lib/server/coffees";
+import { getCoffeeByIdOrNull } from "@/lib/server/coffees";
 import type { Coffee } from "@/lib/types";
 import { resolvedParams } from "@/test/utils";
 import { generateMetadata } from "./page";
 
 vi.mock("@/lib/server/coffees", () => ({
-  getCoffeeById: vi.fn(),
+  getCoffeeByIdOrNull: vi.fn(),
 }));
 
 const coffee: Coffee = {
@@ -34,7 +33,7 @@ function props(id: string) {
 
 describe("generateMetadata (ficha de café)", () => {
   it("devuelve título, descripción y openGraph con el origen", async () => {
-    vi.mocked(getCoffeeById).mockResolvedValue(coffee);
+    vi.mocked(getCoffeeByIdOrNull).mockResolvedValue(coffee);
 
     const meta = await generateMetadata(props("c1"));
 
@@ -47,10 +46,8 @@ describe("generateMetadata (ficha de café)", () => {
     });
   });
 
-  it("devuelve {} ante 404 (se queda con la metadata del layout)", async () => {
-    vi.mocked(getCoffeeById).mockRejectedValue(
-      new ApiError(404, "coffee not found", "NOT_FOUND"),
-    );
+  it("devuelve {} si el café no existe (null → metadata del layout)", async () => {
+    vi.mocked(getCoffeeByIdOrNull).mockResolvedValue(null);
 
     const meta = await generateMetadata(props("inexistente"));
 
@@ -58,7 +55,7 @@ describe("generateMetadata (ficha de café)", () => {
   });
 
   it("devuelve {} si la API falla (no tumba el build)", async () => {
-    vi.mocked(getCoffeeById).mockRejectedValue(new Error("boom"));
+    vi.mocked(getCoffeeByIdOrNull).mockRejectedValue(new Error("boom"));
 
     const meta = await generateMetadata(props("c1"));
 
