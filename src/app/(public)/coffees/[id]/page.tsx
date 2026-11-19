@@ -7,7 +7,7 @@ import { formatPrice, processLabel, roastLabel } from "@/lib/format";
 import { getCoffeeById } from "@/lib/server/coffees";
 import type { Coffee } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { AddToCart } from "@/components/cart/add-to-cart";
 import { StockBadge } from "@/components/catalog/stock-badge";
 import { WaitlistForm } from "@/components/catalog/waitlist-form";
 
@@ -97,9 +97,7 @@ async function CoffeeDetail({
               {formatPrice(coffee.price_cents, coffee.currency)}
             </p>
             {coffee.available ? (
-              <Button className="mt-3 w-full" disabled>
-                Agregar al carrito
-              </Button>
+              <AddToCart coffeeId={coffee.id} coffeeName={coffee.name} />
             ) : (
               <div className="mt-3">
                 <WaitlistForm coffeeId={coffee.id} coffeeName={coffee.name} />

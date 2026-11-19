@@ -155,7 +155,7 @@ manual con el comando de arriba (o un `deploy.sh` que lo envuelva).
 - Botón "avísame cuando vuelva" (waitlist) en productos sin stock
 - States explícitos: loading / error / vacío
 
-### Fase 2 — Carrito invitado + auth
+### Fase 2 — Carrito invitado + auth ✅
 - Carrito: agregar, set quantity (PATCH), quitar; snapshot de nombre/precio
   ya viene del backend
 - Register / login / refresh automático
@@ -256,3 +256,43 @@ Precondición: backend corriendo + `npm run dev` (o build de prod en `:3001`).
 
 **Tests automatizados de la fase:** `npm test` (20 tests: format, CoffeeCard,
 WaitlistForm, Pagination, CoffeeFilters) + CI (lint, typecheck, test, build).
+
+### Fase 2 — Carrito invitado + auth (probado 2026-11-19)
+
+Método: Chromium headless vía CDP (`/tmp/opencode/e2e-fase2.cjs`, reproducible
+con `node e2e-fase2.cjs`) contra build de prod en `:3001` + backend real en
+`:8080`, con perfil de browser limpio (nueva sesión de invitado). 11 checks.
+
+**1. Carrito invitado (sin login)**
+- Ficha de detalle → "Agregar al carrito" → botón pasa a "Agregado ✓"; el
+  contador del header muestra "Carrito, 1 artículo". El guest session ID
+  (UUID en localStorage) viaja en `X-Session-ID`; el carrito vive en Redis.
+
+**2. Página `/cart`**
+- Ítem con nombre, foto, precio unitario ($ 92.000) y total.
+- Stepper "+" sube a cantidad 2 → total $ 184.000 (PATCH al backend).
+- "Quitar" → estado vacío "Tu carrito está vacío." con CTA al catálogo.
+
+**3. Registro, logout y login con merge del carrito invitado**
+- Con 1 unidad en el carrito de invitado: registro → header saluda
+  "Hola, {nombre}"; logout → header vuelve a "Ingresar" (estado invitado).
+- Login con la cuenta recién creada → el carrito del usuario trae la unidad
+  mergeada desde el invitado (backend fusiona vía `X-Session-ID` en el login).
+
+**4. Credenciales inválidas**
+- Login con contraseña incorrecta → alert "Correo o contraseña incorrectos."
+  (mapeo del 401 `UNAUTHORIZED`), sin tokens en sesión.
+
+**Hallazgo (bug corregido):** Next 16 con Cache Components preserva hasta 3
+rutas ocultas con `<Activity>` **sin desmontarlas ni resetear su estado**.
+Tras un login exitoso el form de `/login` quedaba con `status="submitting"`
+(botón "Ingresando…" deshabilitado) y al volver a la ruta se re-mostraba
+atorado. Corrección: el submit exitoso hace `resetForm()` antes de
+`router.push()` (ver `src/app/(auth)/login/page.tsx` y `register/page.tsx`).
+El E2E lee texto con `innerText` y filtra finders a elementos visibles, por
+los árboles ocultos de Activity.
+
+**Tests automatizados de la fase:** `npm test` (46 tests: + cart hooks,
+AddToCart, QuantityStepper, HeaderActions, página /cart, login, register —
+incluye 2 tests de regresión del reset post-submit) + CI (lint, typecheck,
+test, build).

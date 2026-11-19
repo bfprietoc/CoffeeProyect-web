@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HeaderActions } from "@/components/layout/header-actions";
 
 /** Chrome de las rutas públicas: header con nav + footer. */
 export default function PublicLayout({ children }: LayoutProps<"/">) {
@@ -16,6 +17,7 @@ export default function PublicLayout({ children }: LayoutProps<"/">) {
             >
               Catálogo
             </Link>
+            <HeaderActions />
           </nav>
         </div>
       </header>
