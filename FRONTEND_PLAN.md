@@ -86,6 +86,12 @@ stack completo: **~1.5 GB de RAM y 10–30 GB de disco** (web ~250MB, api
 ~50MB, postgres ~300MB, redis ~50MB, caddy + Docker). Sobrado — incluso
 podría correr los stacks de dev y prod a la vez.
 
+**Alternativa concreta (2026-11-19):** equipo de escritorio viejo, 4 GB RAM
+DDR4 + 512 GB disco. Ajusta el stack (~1–1.5 GB) pero exige: (1) correrlo
+**headless** (sin GUI), y (2) **swap de ~4 GB** como red de seguridad contra
+picos de Postgres/Node. El `docker system prune` por deploy pasa a ser
+obligatorio (no opcional) para no llenar el disco con imágenes.
+
 **Arquitectura (un solo Docker Compose en la mini PC):**
 
 ```
@@ -180,7 +186,8 @@ manual con el comando de arriba (o un `deploy.sh` que lo envuelva).
   carrito); grupo de rutas `(admin)` separado del público
 
 ### Fase 6 — Pulido y deploy self-hosted
-- Responsive, metadata/OG por café (SEO), accesibilidad básica
+- ✅ Responsive, metadata/OG por café (SEO), accesibilidad básica
+  (ver "Fase 6 — Pulido" en el registro de E2E, 2026-11-19)
 - Playwright E2E contra el backend real (subconjunto de la batería de 126
   aserciones: catálogo, carrito invitado, merge, checkout, cancel)
 - Dockerfile multi-stage de Next.js (build → `next start`)
@@ -563,3 +570,59 @@ dirección + cambio de estado, móvil 390px) — todas OK
 **Tests automatizados de la fase:** `npm test` (130 tests: + admin session,
 hooks admin [probes de invalidación por prefijo], login-form, coffee-form,
 stock-panel, orders-tab, página /admin) + CI (lint, typecheck, test, build).
+
+### Fase 6 — Pulido (probado 2026-11-19)
+
+Método: screenshots Chromium headless vía CDP (`/tmp/opencode/shots-fase6.cjs`,
+baseline) y `/tmp/opencode/shots-fase6-despues.cjs` (post-fix) contra build de
+prod en `:3001` + backend real en `:8080`, viewport 1280x900 (desktop) y
+390x844 (móvil, con usuario logueado para el header completo).
+
+**1. Header móvil (390px) — wrap de "Mi cuenta" corregido**
+- Baseline: con sesión logueada, "Mi cuenta" hacía wrap a dos líneas
+  (logo + Catálogo + carrito + Mi cuenta + Salir no cabían en 390px).
+- Fix: el logo pasa a icono-only bajo `sm` (`☕` + texto oculto) y todos los
+  links de nav llevan `whitespace-nowrap`. Post-fix: todo en una línea.
+
+**2. Tarjetas del catálogo — espacio muerto corregido**
+- Baseline: el grid estira las tarjetas a la altura de la fila; la tarjeta
+  con título/descripción de 2 líneas ("Finca La Esperanza Wush Wush") dejaba
+  un hueco visible entre las notas y el footer en las tarjetas cortas.
+- Fix: `line-clamp-1` en la descripción de `CoffeeCard`. Alturas uniformes,
+  footer pegado al contenido; el origen completo sigue en la ficha de detalle.
+
+**3. Metadata/OG por café (SEO)**
+- `generateMetadata` de la ficha ahora emite `openGraph` (título con origen:
+  "El Paraíso 92 — El Paraíso, Colombia", descripción, `type: website`)
+  además del título/descripción existentes.
+- Layout raíz: `metadataBase` (env `NEXT_PUBLIC_SITE_URL`, default
+  `http://localhost:3001`), defaults de `openGraph` (siteName, locale `es_CO`)
+  y `twitter:card summary`.
+- Verificado en el HTML final de `GET /coffees/{id}` con backend vivo:
+  `<title>`, `og:title` y `og:description` por café presentes (PPR: el shell
+  statico trae la metadata del layout y la parte dinámica streaméa la del
+  café — si el backend está caído se queda con los defaults, sin tumbar la
+  página). Sin `og:image`: el schema del backend no tiene campo de imagen
+  (limitación documentada).
+- Sin sitemap/canonical: la app vive en un tailnet privado (sin valor de
+  indexación); `metadataBase` queda listo si se expone públicamente.
+
+**4. Accesibilidad básica**
+- Skip-link "Saltar al contenido" en el layout público (visible solo con
+  foco) + `id="contenido"` en `<main>`.
+- Auditoría del estado existente (todo ya cubierto): labels reales en los 31
+  inputs, `aria-label` en botones de icono (carrito), `role="group"` +
+  `aria-live` en el stepper de cantidad, selects de filtros dentro de
+  `<label>`, `lang="es"`.
+
+**Hallazgo operativo (esta máquina de dev):** los procesos levantados con
+`nohup`/`setsid` (backend `go run`, `next start`) morían sin rastro cuando la
+sesión de escritorio se reiniciaba o el equipo suspendía. Solución: servicios
+de usuario systemd con `Restart=always` (`~/.config/systemd/user/coffee-api.service`
+y `coffee-web.service`; backend como binario precompilado en
+`~/.local/bin/coffee-api`). `systemctl --user restart coffee-api|coffee-web`;
+logs en `journalctl --user -u <svc>`. No enabled at boot a propósito.
+
+**Tests automatizados de la fase:** `npm test` (133 tests: + generateMetadata
+de la ficha [openGraph con origen, 404 → {}, API caída → {}]) + CI
+(lint, typecheck, test, build).

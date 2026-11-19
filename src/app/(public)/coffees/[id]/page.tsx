@@ -118,7 +118,11 @@ export default function CoffeeDetailPage(props: PageProps<"/coffees/[id]">) {
   );
 }
 
-/** SEO: título y descripción por café (Fase 1 del plan; OG en Fase 6). */
+/**
+ * SEO: título, descripción y openGraph por café. Sin `og:image`: el schema
+ * del backend no tiene campo de imagen (limitación documentada; un og:image
+ * genérico de marca sería un follow-up).
+ */
 export async function generateMetadata(
   props: PageProps<"/coffees/[id]">,
 ): Promise<Metadata> {
@@ -128,6 +132,11 @@ export async function generateMetadata(
     return {
       title: coffee.name,
       description: coffee.description,
+      openGraph: {
+        title: `${coffee.name} — ${coffee.farm.name}, ${coffee.farm.country}`,
+        description: coffee.description,
+        type: "website",
+      },
     };
   } catch {
     // 404 o API caída: se queda con la metadata por defecto del layout.

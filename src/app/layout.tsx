@@ -14,12 +14,23 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  // Base para URLs absolutas de OG (metadataBase). En producción apunta a la
+  // URL del tailnet; en dev, al build local.
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3001",
+  ),
   title: {
     default: "CoffeeProyect — Cafés de especialidad",
     template: "%s — CoffeeProyect",
   },
   description:
     "Cafés de especialidad colombianos: orígenes, procesos y notas de cata. Compra directo a finca.",
+  openGraph: {
+    siteName: "CoffeeProyect",
+    locale: "es_CO",
+    type: "website",
+  },
+  twitter: { card: "summary" },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

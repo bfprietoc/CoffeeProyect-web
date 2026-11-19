@@ -18,7 +18,7 @@ export function HeaderActions() {
         <div className="flex items-center gap-2">
           <Link
             href="/account"
-            className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             Mi cuenta
           </Link>
@@ -32,7 +32,7 @@ export function HeaderActions() {
       ) : (
         <Link
           href="/login"
-          className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           Ingresar
         </Link>

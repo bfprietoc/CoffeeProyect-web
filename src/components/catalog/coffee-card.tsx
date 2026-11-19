@@ -27,7 +27,7 @@ export function CoffeeCard({ coffee }: { coffee: Coffee }) {
           <CardTitle className="line-clamp-1 group-hover/card-link:underline">
             {coffee.name}
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="line-clamp-1">
             {coffee.farm.name} · {coffee.farm.region}, {coffee.farm.country}
           </CardDescription>
         </CardHeader>
