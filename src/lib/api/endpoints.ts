@@ -1,6 +1,8 @@
 import type {
   Address,
   AdjustStockRequest,
+  AdjustStockResult,
+  AdminOrderFilters,
   AddCartItemRequest,
   AuthResponse,
   Cart,
@@ -14,7 +16,7 @@ import type {
   PlaceOrderRequest,
   RegisterRequest,
   SetQuantityRequest,
-  StockMovement,
+  StockInfo,
   SubscribeWaitlistRequest,
   UpdateCoffeeRequest,
   UpdateOrderStatusRequest,
@@ -93,31 +95,54 @@ export const subscribeWaitlist = (body: SubscribeWaitlistRequest) =>
   api.post<WaitlistEntry>("/waitlist", body);
 
 // ---------- admin (X-Api-Key en memoria, nunca en localStorage) ----------
+// conAuth/withSessionId en false: la autenticación es solo por X-Api-Key;
+// evitar el reintento 401→refresh (pensado para JWT) y no enviar el
+// X-Session-ID del carrito en peticiones de admin.
+
+const ADMIN_NO_AUTH = { withAuth: false, withSessionId: false } as const;
 
 export const adminCreateCoffee = (apiKey: string, body: CreateCoffeeRequest) =>
-  api.post<Coffee>("/admin/coffees", body, { headers: { "X-Api-Key": apiKey } });
+  api.post<Coffee>("/admin/coffees", body, {
+    headers: { "X-Api-Key": apiKey },
+    ...ADMIN_NO_AUTH,
+  });
 
 export const adminUpdateCoffee = (apiKey: string, id: string, body: UpdateCoffeeRequest) =>
-  api.put<Coffee>(`/admin/coffees/${id}`, body, { headers: { "X-Api-Key": apiKey } });
+  api.put<Coffee>(`/admin/coffees/${id}`, body, {
+    headers: { "X-Api-Key": apiKey },
+    ...ADMIN_NO_AUTH,
+  });
 
 export const adminDeleteCoffee = (apiKey: string, id: string) =>
-  api.delete<void>(`/admin/coffees/${id}`, { headers: { "X-Api-Key": apiKey } });
+  api.delete<void>(`/admin/coffees/${id}`, {
+    headers: { "X-Api-Key": apiKey },
+    ...ADMIN_NO_AUTH,
+  });
 
 export const adminGetStock = (apiKey: string, id: string) =>
-  api.get<StockMovement[]>(`/admin/coffees/${id}/stock`, {
+  api.get<StockInfo>(`/admin/coffees/${id}/stock`, {
     headers: { "X-Api-Key": apiKey },
+    ...ADMIN_NO_AUTH,
   });
 
 export const adminAdjustStock = (apiKey: string, id: string, body: AdjustStockRequest) =>
-  api.patch<StockMovement>(`/admin/coffees/${id}/stock`, body, {
+  api.patch<AdjustStockResult>(`/admin/coffees/${id}/stock`, body, {
     headers: { "X-Api-Key": apiKey },
+    ...ADMIN_NO_AUTH,
   });
 
-export const adminListOrders = (apiKey: string) =>
-  api.get<Order[]>("/admin/orders", { headers: { "X-Api-Key": apiKey } });
+export const adminListOrders = (apiKey: string, filters?: AdminOrderFilters) =>
+  api.get<Order[]>(
+    `/admin/orders${toQueryString(filters as Record<string, string | number | boolean | undefined>)}`,
+    { headers: { "X-Api-Key": apiKey }, ...ADMIN_NO_AUTH },
+  );
 
 export const adminUpdateOrderStatus = (
   apiKey: string,
   id: string,
   body: UpdateOrderStatusRequest,
-) => api.patch<Order>(`/admin/orders/${id}/status`, body, { headers: { "X-Api-Key": apiKey } });
+) =>
+  api.patch<Order>(`/admin/orders/${id}/status`, body, {
+    headers: { "X-Api-Key": apiKey },
+    ...ADMIN_NO_AUTH,
+  });

@@ -170,10 +170,14 @@ manual con el comando de arriba (o un `deploy.sh` que lo envuelva).
 ### Fase 4 — Cuenta ✅
 - Perfil (nombre) + CRUD de direcciones con `is_default`
 
-### Fase 5 — Panel admin
-- "Login" con API key (memoria)
-- CRUD de cafés, ajuste de stock con movimientos, gestión de órdenes
-  (estado + tracking number)
+### Fase 5 — Panel admin ✅
+- "Login" con API key (memoria): se verifica contra la API antes de
+  aceptarla; nunca persiste (al recargar se pierde)
+- CRUD de cafés (crear/editar inline, eliminar en dos pasos), ajuste de
+  stock con movimientos auditables, gestión de órdenes (estado + tracking
+  number) con filtro por estado
+- Chrome propio del panel (header "⚙️ Panel admin", sin nav de tienda ni
+  carrito); grupo de rutas `(admin)` separado del público
 
 ### Fase 6 — Pulido y deploy self-hosted
 - Responsive, metadata/OG por café (SEO), accesibilidad básica
@@ -462,3 +466,100 @@ móvil 390px) — todas OK.
 **Tests automatizados de la fase:** `npm test` (98 tests: + hooks account
 [invalidación de `me` y `addresses`], profile-form, address-list, página
 /account) + CI (lint, typecheck, test, build).
+
+### Fase 5 — Panel admin (probado 2026-11-19)
+
+Método: Chromium headless vía CDP (`/tmp/opencode/e2e-fase5.cjs`, reproducible
+con `node e2e-fase5.cjs`) contra build de prod en `:3001` + backend real en
+`:8080`, con perfil de browser limpio. 30 checks. La orden de prueba se crea
+por API sobre un café real del catálogo ("El Paraíso 92", stock suficiente);
+el café CRUD se crea/borra durante el run. Cleanup automático al final
+(usuario/orden/direcciones/carts por SQL + restitución de stock vía API con
+movimiento auditable).
+
+**1. Login (API key en memoria)**
+- Clave inválida → "Clave inválida. Verifica con quien administra el backend."
+  (el login verifica la clave contra `GET /admin/orders?limit=1`; 401 → error,
+  sin sesión). Clave válida (`ADMIN_API_KEY`) → entra al panel.
+- La clave vive solo en memoria (`admin-session.ts`, patrón listeners igual
+  que `session.ts`): al recargar la pestaña el gate vuelve a pedirla.
+
+**2. Crear café (POST /admin/coffees)**
+- "Nuevo café" → form inline reemplaza la tabla (nombre, proceso/tostado en
+  selects, precio en pesos COP → centavos, notas comma-separated → array,
+  bolsa, moneda, productor, finca/país/región, stock inicial) → el café
+  aparece en la tabla y en `GET /coffees` (precio/notas/stock verificados).
+
+**3. Editar café (PUT /admin/coffees/{id})**
+- Form prellenado; productor/finca en bloque de solo lectura (el service los
+  conserva) y stock no editable (se gestiona en «Stock»). Guardar → nombre y
+  precio actualizados, finca conservada (verificado en API).
+
+**4. Stock (GET/PATCH /admin/coffees/{id}/stock)**
+- Panel inline: stock actual + form de ajuste (add/subtract, cantidad, nota)
+  + listado de movimientos (el backend los devuelve en DESC).
+- Ajuste +5 → feedback "Stock ajustado: 3 → 8 bolsas." + movimiento visible.
+- Restar 99 con stock 8 → error del backend "not enough stock to subtract"
+  (HTTP 422) mostrado en el panel.
+
+**5. Eliminar café (DELETE /admin/coffees/{id}, dos pasos)**
+- "Eliminar" → confirmación inline "¿Eliminar este café?" → "Sí, eliminar" →
+  la fila desaparece y el backend ya no lo expone; `GET .../stock` del café
+  borrado responde 404 (los `stock_movements` se limpian en la misma
+  transacción — ver hallazgo 2).
+
+**6. Órdenes (GET /admin/orders + PATCH .../status)**
+- Orden creada por API (confirmed) aparece en la pestaña Órdenes con id corto,
+  fecha, destino, total y badge de estado.
+- "Gestionar" → detalle expandible: ítems, dirección completa y form de
+  cambio de estado (select + tracking number opcional; el botón queda
+  deshabilitado sin cambio).
+- → processing → feedback "Estado actualizado a «En preparación»."; →
+  shipped + tracking "SEI-E2E-123" → el backend confirma ambos (verificado en
+  `GET /orders/{id}`).
+- Filtro por estado: "shipped" → solo órdenes enviadas; el contador coincide
+  con las filas visibles.
+
+**7. Eliminar café con órdenes → bloqueado (409)**
+- Intentar borrar "El Paraíso 92" (tiene órdenes) → la fila muestra el error
+  del backend: "No se pudo eliminar «El Paraíso 92»: coffee has orders and
+  cannot be deleted (HTTP 409)." La API responde `409 CONFLICT` y el café
+  sigue existiendo (el historial de órdenes no se destruye).
+
+**8. Cerrar panel**
+- "Cerrar panel" descarta la clave de memoria → vuelve al form de login, sin
+  tocar la sesión de cliente (JWT).
+
+**Hallazgos (2 bugs críticos del backend descubiertos en el E2E y corregidos
+en `CoffeeProyect` @ `develop`, commit `5bff7fe`):**
+1. **`writeInternalError` recursivo (crash total del servidor):**
+   `internal/handler/response.go` se llamaba a sí mismo en vez de responder:
+   un solo 500 generaba ~4.8M líneas de log y un stack overflow que mataba
+   todo el backend (lo provocó el primer run del E2E). Fix: responde una
+   única vez con 500 + `INTERNAL_ERROR` (+ test de regresión).
+2. **`DELETE /admin/coffees/{id}` imposible para cafés con movimientos:**
+   `stock_movements` (y también `cart_items`/`waitlist`) tienen FK NO ACTION
+   a `coffees` y el store no las limpiaba → 500 (23503) en el primer café con
+   movimientos. Fix: `CoffeeStore.Delete` ahora es una transacción que borra
+   esos datos efímeros y **bloquea** (nuevo `ErrCoffeeHasOrders` → 409
+   `CONFLICT`) si el café ya fue vendido, para no destruir `order_items`.
+   El panel muestra el mensaje del backend en la fila (no un genérico).
+   Tests: 2 integration tests del Delete + test de propagación en service.
+
+**Limitaciones documentadas (backend):**
+- No valida transiciones de estado de órdenes: cualquier estado es aceptable
+  desde cualquier otro (el panel lo permite; follow-up backend opcional:
+  máquina de estados).
+- No existe `GET /admin/coffees`: la tabla del panel usa el endpoint público
+  `GET /coffees?limit=50` (la lectura no necesita clave).
+
+**Revisión visual:** 10 screenshots (login con error, tabla de cafés con
+badge "Agotado", form crear, form editar con bloque read-only, panel de stock
+con movimiento real, confirmación de eliminación inline, error 409 en la
+fila, pestaña Órdenes con filtros/badges/guías, orden expandida con ítems +
+dirección + cambio de estado, móvil 390px) — todas OK
+(`/tmp/opencode/shots-fase5.cjs`).
+
+**Tests automatizados de la fase:** `npm test` (130 tests: + admin session,
+hooks admin [probes de invalidación por prefijo], login-form, coffee-form,
+stock-panel, orders-tab, página /admin) + CI (lint, typecheck, test, build).

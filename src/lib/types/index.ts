@@ -12,6 +12,7 @@ export type ApiErrorCode =
   | "NOT_FOUND"
   | "UNAUTHORIZED"
   | "EMAIL_CONFLICT"
+  | "CONFLICT"
   | "BAD_REQUEST"
   | "INVALID_INPUT"
   | "UNAVAILABLE"

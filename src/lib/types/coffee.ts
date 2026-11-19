@@ -59,12 +59,18 @@ export interface CreateCoffeeRequest {
   farm_region: string;
 }
 
-/** Body de PUT /admin/coffees/{id} (todos los campos opcionales). */
+/**
+ * Body de PUT /admin/coffees/{id}. El backend SIEMPRE valida name, process,
+ * roast_level y price_cents > 0 (400 si faltan), aunque el type sea Partial:
+ * el form de edición siempre envía los cuatro. No acepta producer/farm ni
+ * stock: el service conserva los valores existentes.
+ */
 export type UpdateCoffeeRequest = Partial<
   Pick<
     CreateCoffeeRequest,
     | "name"
     | "process"
+    | "roast_level"
     | "description"
     | "tasting_notes"
     | "bag_size_grams"

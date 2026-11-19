@@ -15,3 +15,17 @@ export interface AdjustStockRequest {
   quantity: number;
   note: string;
 }
+
+/** Respuesta de GET /admin/coffees/{id}/stock. */
+export interface StockInfo {
+  coffee_id: string;
+  stock_bags: number;
+  movements: StockMovement[];
+}
+
+/** Respuesta de PATCH /admin/coffees/{id}/stock. */
+export interface AdjustStockResult {
+  coffee_id: string;
+  old_stock: number;
+  result_stock: number;
+}

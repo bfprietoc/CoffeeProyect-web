@@ -48,3 +48,10 @@ export interface UpdateOrderStatusRequest {
   status: OrderStatus;
   tracking_number?: string;
 }
+
+/** Filtros de GET /admin/orders (query params; limit máx 100). */
+export interface AdminOrderFilters {
+  status?: OrderStatus;
+  page?: number;
+  limit?: number;
+}
