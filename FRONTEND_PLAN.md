@@ -206,6 +206,9 @@ manual con el comando de arriba (o un `deploy.sh` que lo envuelva).
    = clonar + `docker compose up`).
 6. **SSD de 256 GB**: las imágenes Docker acumulan espacio. El
    `docker system prune` en cada deploy mantiene el uso en 10–30 GB.
+7. **Build PPR + `next start` en dev**: borrar `.next` con el server corriendo
+   rompe las rutas `◐ Partial Prerender` (chunks SSR lazy → `ChunkLoadError`).
+   Rebuild + restart por PID; ver "Revisión visual del front" (2026-11-19).
 
 ## Criterio de "listo" por fase
 
@@ -358,8 +361,49 @@ con `node e2e-fase3.cjs`) contra build de prod en `:3001` + backend real en
    `resolvedParams()` (`src/test/utils.tsx`): Promise pre-marcada
    `status:"fulfilled"` + `value`, que es lo que Next hace en prod y lo que
    `use()` lee de forma síncrona (`resolveThenable`).
+4. **CI typecheck en checkout limpio (preexistente, Fases 1–3):**
+   `PageProps`/`LayoutProps` son tipos globales que Next genera en
+   `.next/types`; sin ese directorio el typecheck fallaba siempre. Fix: script
+   `typegen` (`next typegen`) en package.json + step en CI antes de
+   lint/typecheck (commit `153abf6`).
 
 **Tests automatizados de la fase:** `npm test` (83 tests: + address form,
 address selector, validation summary, order status badge, cancel button,
 páginas /checkout, /orders, /orders/[id], providers) + CI (lint, typecheck,
 test, build).
+
+### Revisión visual del front (2026-11-19)
+
+Método: 17 screenshots capturadas con Chromium headless vía CDP (mismo
+harness que el E2E, `/tmp/opencode/shots-fase3.cjs`) contra build de prod en
+`:3001` + backend real. Viewport 1280x900 (desktop) y 390x844 (móvil),
+recorriendo invitado + flujo completo logueado (registro → carrito → checkout
+con dirección nueva → orden → historial → cancelación) + móvil. Revisión
+manual de cada captura.
+
+**Páginas verificadas (todas OK):** home, catálogo (filtros, paginación,
+badges de stock, agotado), ficha de café (stepper de cantidad), carrito vacío
+y con ítem, gates de `/checkout` y `/orders` (invitado), login, checkout sin
+dirección / form de dirección / completo (predeterminada auto-marcada, botón
+"Confirmar pedido" deshabilitado sin dirección), detalle de orden, historial,
+cancelación en dos pasos (confirmación inline), detalle cancelado, móvil
+(catálogo + detalle, sin overflow).
+
+**Hallazgos menores (cosméticos — se pulen en Fase 6):**
+- Espacio muerto en las tarjetas de la home (el grid estira los items).
+- Sin fotos de producto: el schema del backend no tiene campo de imagen.
+
+**Duda resuelta — restock al cancelar:** en las capturas el stock de "El
+Paraíso 92" mostraba 10 (no 12). Verificado en código: `OrderStore.Cancel`
+restaura el stock **atómicamente en la misma transacción** que marca
+`cancelled` (`internal/store/postgres/order_store.go`). El 10 era correcto:
+dos órdenes de prueba activas habían consumido bolsas (1 `shipped` del E2E +
+1 `confirmed` de un run de screenshots fallido antes de cancelar); la orden
+cancelada sí devolvió la suya (neto 0). Tras el cleanup, stock restaurado a
+12.
+
+**Lección operativa:** nunca `rm -rf .next` con el server de prod
+(`next start :3001`) corriendo desde ese build — la parte dinámica PPR carga
+los chunks SSR de forma lazy y las rutas `◐` se quedan en skeleton con
+`ChunkLoadError` (digest 2413310770). Fix: rebuild + restart por PID (el
+proceso se titula `next-server`; `pkill` no lo toma).
