@@ -152,6 +152,12 @@ hay stack) → `docker compose up -d --build` → caddy reload →
 `docker system prune`. El CI (GitHub Actions) valida lint, typecheck, build
 y E2E; el deploy es manual con el script.
 
+**Estrategia de ramas (2026-11-19):** `develop` = trabajo diario (ambos
+repos), `main` = producción (lo que corre en la PC; de ahí hace pull
+`deploy.sh`), tags `vX.Y.Z` por release. El CI corre en `main` y
+`develop`. El `master` viejo del backend (reliquia del scaffold) se
+eliminó: no hay rama aparte, `main` es la "master".
+
 > **Guía completa para la máquina de despliegue: [`DEPLOY.md`](./DEPLOY.md)** —
 > setup one-time (Ubuntu, swap 4 GB, Docker, firewall), secretos, primer
 > deploy + seed, Cloudflare Tunnel y operación diaria. Pensada para leerse

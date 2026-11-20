@@ -124,18 +124,18 @@ El layout importa: el compose del front referencia `../CoffeeProyect`.
 mkdir -p ~/coffee && cd ~/coffee
 git clone git@github.com:bfprietoc/CoffeeProyect.git
 git clone git@github.com:bfprietoc/CoffeeProyect-web.git
-
-# El backend se despliega desde la rama develop:
-cd CoffeeProyect && git checkout develop && cd ..
 ```
 
 Resultado esperado:
 
 ```
 ~/coffee/
-├── CoffeeProyect/        (backend Go, rama develop)
+├── CoffeeProyect/        (backend Go)
 └── CoffeeProyect-web/    (front; el compose y deploy.sh viven acá)
 ```
+
+**Ambos repos quedan en `main`** (la rama de producción): no cambies de
+rama en la PC — `deploy.sh` hace pull de `main`.
 
 **Acceso a GitHub:** si no tienes clave SSH en la máquina, genera una y
 agrega el `.pub` a GitHub (Settings → SSH keys):
@@ -281,12 +281,17 @@ sudo tailscale serve --bg http://localhost
 
 ## Operación diaria
 
-### Nueva versión (lo del 99% de los deploys)
+### Releases (trabajo en `develop` → `main` + tag)
 
-En tu laptop: push a `main` (web) y/o `develop` (backend). El CI valida
-lint + typecheck + build + 13 tests E2E antes de que toques la PC.
+El trabajo diario se hace en **`develop`** (ambos repos); el CI corre en
+`main` y `develop`. Cuando algo está listo para producción:
 
-En la **PC vieja**:
+1. En tu laptop, en cada repo con cambios:
+   ```bash
+   git checkout main && git merge --ff-only develop && git push origin main
+   git tag -a v1.1.0 -m "Fase X: resumen" && git push origin v1.1.0
+   ```
+2. En la **PC vieja**:
 
 ```bash
 cd ~/coffee/CoffeeProyect-web && ./deploy.sh
@@ -298,14 +303,33 @@ backup `pg_dump` a `backups/` (si ya hay stack) →
 `caddy reload` (forzado: Caddy no detecta el reemplazo del archivo montado)
 → `docker system prune -f` (imágenes viejas; en 4 GB de RAM no es opcional).
 
+Los tags (`v1.0.0`, `v1.1.0`, ...) marcan cada release: qué contenía cada
+versión y a dónde volver en un rollback.
+
 ### Rollback
 
+Recomendado — revertir en `main` desde tu laptop (la rama de la PC nunca
+se desalinea):
+
 ```bash
-git revert <commit> && git push      # en el repo que tiene el cambio
+git checkout main
+git revert <commit-malo>        # o: git revert v1.0.0..v1.1.0 (toda la release)
+git push origin main
+# en la PC vieja:
 cd ~/coffee/CoffeeProyect-web && ./deploy.sh
 ```
 
-Los datos no se tocan: viven en el volume `pg_data`, no en la imagen.
+Alternativa — quedarse en la release anterior, directo en la PC vieja:
+
+```bash
+git checkout v1.0.0             # el tag al que quieres volver
+docker compose -f docker-compose.prod.yml up -d --build
+# para volver a deploys normales después:
+git checkout main && git pull --ff-only
+```
+
+Los datos no se tocan en ninguno de los dos: viven en el volume `pg_data`,
+no en la imagen.
 
 ### Levantar y bajar el stack a mano (manual deployment)
 
