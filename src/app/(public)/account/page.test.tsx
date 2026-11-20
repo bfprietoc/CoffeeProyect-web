@@ -56,6 +56,11 @@ describe("AccountPage", () => {
     expect(
       await screen.findByText(/aún no tienes direcciones guardadas/i),
     ).toBeInTheDocument();
+
+    // Sección "Pedidos": enlace a la lista (descubribilidad, FEATURES_PLAN #1).
+    expect(screen.getByRole("heading", { name: "Pedidos" })).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: /ver mis pedidos/i });
+    expect(link).toHaveAttribute("href", "/orders");
   });
 
   it("muestra error con reintentar si el perfil no carga", async () => {

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMounted } from "@/lib/hooks/use-mounted";
 import { useMe } from "@/lib/query/cart";
 import { useIsAuthenticated } from "@/lib/query/orders";
@@ -67,6 +68,20 @@ export default function AccountPage() {
           </h2>
           <div className="mt-3">
             <AddressList />
+          </div>
+        </section>
+
+        <section aria-labelledby="pedidos-heading">
+          <div className="flex items-center justify-between">
+            <h2 id="pedidos-heading" className="text-lg font-semibold">
+              Pedidos
+            </h2>
+            <Link
+              href="/orders"
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Ver mis pedidos →
+            </Link>
           </div>
         </section>
       </div>
