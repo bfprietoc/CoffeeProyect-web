@@ -22,6 +22,12 @@ export function HeaderActions() {
           >
             Mi cuenta
           </Link>
+          <Link
+            href="/orders"
+            className="whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            Mis pedidos
+          </Link>
           <span className="hidden text-sm text-muted-foreground sm:inline">
             Hola, {me.data?.name ?? "…"}
           </span>

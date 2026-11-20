@@ -47,6 +47,37 @@ test.describe("Catálogo público", () => {
     await expect(page.getByText(COFFEE.priceRe)).toBeVisible();
   });
 
+  test("agregar desde la tarjeta sube el carrito sin navegar (quick add)", async ({
+    page,
+  }) => {
+    await page.goto("/coffees");
+    const card = page
+      .locator('[data-slot="card"]')
+      .filter({ has: page.getByRole("link", { name: COFFEE.name }) });
+
+    await card.getByRole("button", { name: "Agregar" }).click();
+
+    // Feedback en la tarjeta + contador del header, todo sin dejar /coffees.
+    await expect(card.getByRole("button", { name: "Agregado ✓" })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: /carrito, 1 artículo/i }),
+    ).toBeVisible();
+    await expect(page).toHaveURL(/\/coffees/);
+  });
+
+  test("café agotado muestra el botón deshabilitado con etiqueta Agotado", async ({
+    page,
+  }) => {
+    // Antioquia Dark Roast Blend viene con stock_bags=0 en el seed →
+    // available=false (columna generada en el backend).
+    await page.goto("/coffees");
+    const card = page
+      .locator('[data-slot="card"]')
+      .filter({ has: page.getByRole("link", { name: "Antioquia Dark Roast Blend" }) });
+
+    await expect(card.getByRole("button", { name: "Agotado" })).toBeDisabled();
+  });
+
   test("café inexistente muestra el estado de no encontrado", async ({ page }) => {
     await page.goto("/coffees/00000000-0000-4000-8000-000000000000");
     // La ruta tiene su propio not-found.tsx ("Café no encontrado"); con PPR
