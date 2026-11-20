@@ -11,7 +11,11 @@ test.describe("Mis pedidos (descubribilidad)", () => {
   }) => {
     await register(page);
 
-    const link = page.getByRole("link", { name: "Mis pedidos" });
+    // El header (role banner): en /orders/{id} también existe un link
+    // "← Mis pedidos" de volver, así que se acota al header.
+    const link = page
+      .getByRole("banner")
+      .getByRole("link", { name: "Mis pedidos" });
     await expect(link).toBeVisible();
     await link.click();
 
@@ -25,7 +29,11 @@ test.describe("Mis pedidos (descubribilidad)", () => {
     // placeOrder deja la página en /orders/{id} (redirección del checkout).
     await placeOrder(page);
 
-    await page.getByRole("link", { name: "Mis pedidos" }).click();
+    // Acotado al header: la ficha del pedido tiene su propio "← Mis pedidos".
+    await page
+      .getByRole("banner")
+      .getByRole("link", { name: "Mis pedidos" })
+      .click();
     await expect(page).toHaveURL(/\/orders$/);
 
     // El pedido recién creado aparece en la lista (id corto de 8 hex).
