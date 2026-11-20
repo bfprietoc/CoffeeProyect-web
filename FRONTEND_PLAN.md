@@ -86,11 +86,13 @@ stack completo: **~1.5 GB de RAM y 10–30 GB de disco** (web ~250MB, api
 ~50MB, postgres ~300MB, redis ~50MB, caddy + Docker). Sobrado — incluso
 podría correr los stacks de dev y prod a la vez.
 
-**Alternativa concreta (2026-11-19):** equipo de escritorio viejo, 4 GB RAM
-DDR4 + 512 GB disco. Ajusta el stack (~1–1.5 GB) pero exige: (1) correrlo
-**headless** (sin GUI), y (2) **swap de ~4 GB** como red de seguridad contra
-picos de Postgres/Node. El `docker system prune` por deploy pasa a ser
-obligatorio (no opcional) para no llenar el disco con imágenes.
+**Máquina real (2026-11-20): `wake-agent`** — PC de escritorio vieja con
+Arch Linux, 2 cores, 3.6 GB RAM + `zram0` (1.8 GB de swap), ~447 GB disco,
+encendida 24/7 (enciende a `ia-server`) y ya con Tailscale. El stack corre
+ahí desde el **2026-11-20** (release `v1.0.0`), accesible en el tailnet en
+**https://wake-agent.taile51409.ts.net**; queda pendiente el dominio propio
++ Cloudflare Tunnel para acceso público. El `docker system prune` por deploy
+es obligatorio (lo hace `deploy.sh`) para no llenar el disco con imágenes.
 
 **Arquitectura (un solo Docker Compose en la mini PC):**
 
@@ -136,8 +138,8 @@ acepta URLs relativas. Ver `src/lib/api/config.ts`.
 **Workflow de deploy (simple, suficiente para este tráfico):**
 
 ```bash
-# En la mini PC (una vez): instalar Docker + Tailscale/CF Tunnel
-sudo apt install docker.io docker-compose-plugin tailscale
+# En wake-agent (una vez): Docker + buildx (Tailscale ya estaba instalado)
+sudo pacman -Sy docker docker-compose docker-buildx
 
 # Clonar los dos repos lado a lado (el compose referencia ../CoffeeProyect):
 #   ~/coffee/CoffeeProyect  (backend)
@@ -159,9 +161,10 @@ repos), `main` = producción (lo que corre en la PC; de ahí hace pull
 eliminó: no hay rama aparte, `main` es la "master".
 
 > **Guía completa para la máquina de despliegue: [`DEPLOY.md`](./DEPLOY.md)** —
-> setup one-time (Ubuntu, swap 4 GB, Docker, firewall), secretos, primer
-> deploy + seed, Cloudflare Tunnel y operación diaria. Pensada para leerse
-> una sola vez frente a la máquina vieja.
+> setup one-time (Docker + buildx, deploy keys de GitHub, `.env`, primer
+> deploy + seed, `tailscale serve`), acceso público pendiente (Cloudflare
+> Tunnel) y operación diaria. Pensada para leerse una sola vez frente a
+> wake-agent, y como guía de reconstrucción si la máquina muere.
 
 ## Fases
 
