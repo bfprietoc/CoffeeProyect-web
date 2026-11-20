@@ -25,7 +25,7 @@ bajo. Ver sección [Despliegue](#despliegue--self-hosted-en-mini-pc).
 | Client state | **Zustand** (carrito, sesión) | Mínimo boilerplate para este tamaño de app |
 | API client | **fetch wrapper propio + tipos TS a mano** | El backend no expone OpenAPI; los tipos espejan `internal/domain` (ver riesgo 2) |
 | Testing | **Vitest + Testing Library**, y Playwright E2E contra el backend real | Mismo criterio de validación que la batería E2E del backend |
-| CI/CD | **GitHub Actions** (lint + typecheck + build); deploy manual a la mini PC vía `docker compose` | Ver sección Despliegue |
+| CI/CD | **GitHub Actions** (lint + typecheck + build + Playwright E2E contra el stack real); deploy manual vía `deploy.sh` | Ver sección Despliegue |
 
 **Alternativas descartadas:**
 - SPA pura (Vite + React): más simple, pero sin SSR/ISR → las fichas de
@@ -239,12 +239,13 @@ y E2E; el deploy es manual con el script.
 4. **Carreras de stock**: el backend garantiza atomicidad (FOR UPDATE,
    verificado con test de concurrencia); el front solo debe tratar el 422
    "out of stock" de checkout como estado válido y mostrarlo.
-5. **Punto único de falla (la mini PC)**: si la máquina muere, todo cae.
-   Mitigaciones: `restart: unless-stopped`, backups nocturnos de Postgres a
-   un segundo disco, y el código vive en GitHub (reconstruir en otra máquina
-   = clonar + `docker compose up`).
-6. **SSD de 256 GB**: las imágenes Docker acumulan espacio. El
-   `docker system prune` en cada deploy mantiene el uso en 10–30 GB.
+5. **Punto único de falla (la máquina de despliegue)**: si muere, todo cae.
+   Mitigaciones: `restart: unless-stopped` en todos los servicios, backup
+   `pg_dump` por deploy (`deploy.sh`, en `backups/`) y el código vive en
+   GitHub (reconstruir en otra máquina = clonar los dos repos + `./deploy.sh`).
+6. **Imágenes Docker acumuladas**: el `docker system prune` en cada deploy
+   (obligatorio en la máquina de 4 GB) mantiene el uso bajo; con 512 GB de
+   disco hay margen, pero el prune evita sorpresas.
 7. **Build PPR + `next start` en dev**: borrar `.next` con el server corriendo
    rompe las rutas `◐ Partial Prerender` (chunks SSR lazy → `ChunkLoadError`).
    Rebuild + restart por PID; ver "Revisión visual del front" (2026-11-19).
