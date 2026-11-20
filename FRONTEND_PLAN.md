@@ -109,19 +109,22 @@ redis     (volume persistente)
 - `NEXT_PUBLIC_API_URL` relativo (`/api`) en producción,
   `http://localhost:8080` en desarrollo.
 
-**Acceso y TLS — Tailscale (gratis) para empezar:**
-- Se instala en la mini PC y en cada dispositivo que necesite acceso
-  (laptop, celular).
-- La app queda accesible desde cualquier lugar con una URL tipo
-  `https://coffeeproyect.tailnet.ts.net` — **HTTPS incluido, sin dominio,
-  sin abrir puertos en el router**, funciona incluso con CGNAT.
-- Solo entran los miembros del tailnet (vos + quien invites) — apropiado para
-  uso propio/equipo chico.
+**Acceso y TLS — Decisión (2026-11-19): sitio público 24/7.**
+Objetivo confirmado: la página es pública (marca de café), no solo para el
+equipo. La arquitectura Docker no cambia; solo la puerta de entrada:
 
-**Si a futuro se necesita acceso público (cambio aditivo):**
-Cloudflare Tunnel + dominio (~$10/año): conexión saliente, sin abrir puertos,
-URL real con HTTPS automático. La arquitectura Docker no se toca; solo cambia
-la puerta por la que entra el tráfico.
+- **Cloudflare Tunnel + dominio (~$10/año)** — la puerta principal:
+  conexión saliente desde la mini PC (sin abrir puertos, funciona con CGNAT),
+  URL real `https://tudominio.com` con HTTPS automático. El tunnel apunta a
+  `localhost:80` (Caddy).
+- **Tailscale** — alternativa/complemento de acceso privado: URL tipo
+  `https://<host>.tailnet.ts.net` (HTTPS del tailnet, sin dominio), solo
+  para miembros. Útil para probar antes de tener el dominio.
+
+**Nota técnica (2026-11-19):** el front llama a `/api` relativo en el
+navegador (Caddy lo rutea), pero los fetch del servidor (RSC) usan
+`SERVER_API_URL=http://api:8080` directo al contenedor — Node fetch no
+acepta URLs relativas. Ver `src/lib/api/config.ts`.
 
 **Backups y mantenimiento:**
 - `pg_dump` nocturno por cron a un segundo disco (es la única copia de los
@@ -133,15 +136,21 @@ la puerta por la que entra el tráfico.
 **Workflow de deploy (simple, suficiente para este tráfico):**
 
 ```bash
-# En la mini PC (una vez): instalar Docker + Tailscale
+# En la mini PC (una vez): instalar Docker + Tailscale/CF Tunnel
 sudo apt install docker.io docker-compose-plugin tailscale
 
+# Clonar los dos repos lado a lado (el compose referencia ../CoffeeProyect):
+#   ~/coffee/CoffeeProyect  (backend)
+#   ~/coffee/CoffeeProyect-web  (front; el compose y deploy.sh viven acá)
+
 # Cada deploy:
-git pull && docker compose -f docker-compose.prod.yml up -d --build
+cd ~/coffee/CoffeeProyect-web && ./deploy.sh
 ```
 
-El CI (GitHub Actions) solo valida: lint, typecheck, build. El deploy es
-manual con el comando de arriba (o un `deploy.sh` que lo envuelva).
+`deploy.sh` envuelve: `git pull` de ambos repos → backup `pg_dump` (si ya
+hay stack) → `docker compose up -d --build` → caddy reload →
+`docker system prune`. El CI (GitHub Actions) valida lint, typecheck, build
+y E2E; el deploy es manual con el script.
 
 ## Fases
 
@@ -200,12 +209,21 @@ manual con el comando de arriba (o un `deploy.sh` que lo envuelva).
   sanitiza entre pases de render); ahora `getCoffeeByIdOrNull` resuelve
   `null` ante 404 y la página llama `notFound()` en el flujo normal
   (patrón documentado en `not-found.md` del Next instalado)
-- Dockerfile multi-stage de Next.js (build → `next start`)
-- `docker-compose.prod.yml` en la mini PC (web + api + postgres + redis +
-  caddy) — ver sección Despliegue
+- ✅ Docker: `Dockerfile` multi-stage de Next.js (build con
+  `NEXT_PUBLIC_API_URL=/api` horneado → `next start :3000`), `Dockerfile`
+  del backend (binario estático + `migrations/` para el auto-migrate),
+  `Caddyfile` (`/api/*` → api con `strip_prefix`, resto → web; TLS lo pone
+  la puerta de acceso) y `docker-compose.prod.yml` (web+api+postgres+redis+
+  caddy; solo Caddy publica :80) — commit del push de 2026-11-19.
+  **Validado contra el stack Docker real: 13/13 de la suite Playwright**
+  (flujos de compra de punta a punta vía Caddy).
+- ✅ `deploy.sh`: pull de ambos repos → `pg_dump` (si ya hay stack) →
+  `up -d --build` → caddy reload explícito → `docker system prune`.
+  Backup nocturno por cron: opcional en la máquina de despliegue
+  (el backup por deploy ya cubre los cambios de esquema/datos propios).
 - Tailscale en la mini PC + dispositivos; primer acceso real vía URL del
-  tailnet
-- Cron de `pg_dump` + `docker system prune` en el script de deploy
+  tailnet (o Cloudflare Tunnel + dominio para acceso público 24/7 — ver
+  Decisiones de despliegue, 2026-11-19)
 
 ## Riesgos y notas
 
