@@ -239,6 +239,27 @@ eliminó: no hay rama aparte, `main` es la "master".
   tailnet (o Cloudflare Tunnel + dominio para acceso público 24/7 — ver
   Decisiones de despliegue, 2026-11-19)
 
+### Fase 7 — Ronda de funcionalidades (2026-11-20)
+
+Plan en [`FEATURES_PLAN.md`](./FEATURES_PLAN.md) (ronda 1; detectado en la
+app desplegada). Flujo: rama feature desde `develop` → PR con CI verde
+(quality + E2E) → merge squash a `develop` → release `main` + tag.
+
+- ✅ **Descubribilidad de "Mis pedidos"** (`25b7622`): link en el header
+  (autenticado) + sección "Pedidos" en la página de cuenta. Las páginas
+  `/orders` y `/orders/{id}` ya existían (Fase 3) y el checkout redirige al
+  detalle; lo que faltaba era la entrada permanente — después de esa
+  redirección el usuario perdía sus pedidos salvo sabiendo la URL.
+- ✅ **Quick add desde el catálogo** (`25b7622`): `CoffeeCard`
+  reestructurada (antes toda la tarjeta era un `<Link>` a la ficha; un
+  botón dentro de link es HTML inválido — ahora solo el título enlaza) +
+  `QuickAddButton` (cantidad 1, feedback "Agregado ✓" como en la ficha,
+  deshabilitado como "Agotado" sin stock, funciona igual para invitados).
+- E2E: 18 tests (5 nuevos en `e2e/catalog.spec.ts` + `e2e/orders.spec.ts`:
+  quick add sin navegar, agotado deshabilitado [seed con stock 0], header →
+  lista de pedidos, post-pedido la lista muestra el pedido, cuenta →
+  pedidos). Release `v1.1.0` desplegada en wake-agent.
+
 ## Riesgos y notas
 
 1. **Tokens en `localStorage`**: un XSS expondría el refresh token.

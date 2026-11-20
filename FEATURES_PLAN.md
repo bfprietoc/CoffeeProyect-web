@@ -1,14 +1,20 @@
 # Plan de funcionalidades — Ronda 1 (2026-11-20)
 
+> **Estado (2026-11-20): ítems 1 y 2 completados** (release `v1.1.0`).
+> Pendientes: las ideas de features/estilos/imágenes por llegar (sección
+> "Pendientes").
+>
 > Ronda de mejoras funcionales detectadas en la app desplegada (wake-agent,
 > release `v1.0.0`). Cada ítem: **estado verificado → cambio → validación**
 > (los cambios se prueban con E2E en CI, como el resto del proyecto).
 > Al completar un ítem se marca ✅ y se registra en `FRONTEND_PLAN.md`.
 > El trabajo se hace en `develop`; release a `main` al cerrar la ronda.
+> Flujo de esta ronda: rama feature desde `develop` → PR (CI verde) →
+> merge squash a `develop` → release `main` + tag.
 
 ---
 
-## 1. Descubribilidad de "Mis pedidos" ✅ pendiente
+## 1. Descubribilidad de "Mis pedidos" ✅ (2026-11-20, `25b7622`)
 
 ### Verificado en el código (2026-11-20)
 
@@ -41,7 +47,7 @@ usuario pierde sus pedidos salvo que sepa la URL `/orders`.
 
 ---
 
-## 2. Agregar al carrito rápido desde el catálogo ✅ pendiente
+## 2. Agregar al carrito rápido desde el catálogo ✅ (2026-11-20, `25b7622`)
 
 ### Verificado en el código (2026-11-20)
 
