@@ -127,8 +127,8 @@ navegador (Caddy lo rutea), pero los fetch del servidor (RSC) usan
 acepta URLs relativas. Ver `src/lib/api/config.ts`.
 
 **Backups y mantenimiento:**
-- `pg_dump` nocturno por cron a un segundo disco (es la única copia de los
-  datos — no negociable).
+- `pg_dump` en cada deploy (`deploy.sh`, en `backups/`; es la única copia de
+  los datos — no negociable).
 - `docker system prune` en cada deploy (imágenes viejas no llenan el SSD).
 - Monitoring: `/health` del backend + healthchecks de Docker; opcional
   uptime-kuma.
@@ -151,6 +151,11 @@ cd ~/coffee/CoffeeProyect-web && ./deploy.sh
 hay stack) → `docker compose up -d --build` → caddy reload →
 `docker system prune`. El CI (GitHub Actions) valida lint, typecheck, build
 y E2E; el deploy es manual con el script.
+
+> **Guía completa para la máquina de despliegue: [`DEPLOY.md`](./DEPLOY.md)** —
+> setup one-time (Ubuntu, swap 4 GB, Docker, firewall), secretos, primer
+> deploy + seed, Cloudflare Tunnel y operación diaria. Pensada para leerse
+> una sola vez frente a la máquina vieja.
 
 ## Fases
 
