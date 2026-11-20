@@ -307,6 +307,44 @@ cd ~/coffee/CoffeeProyect-web && ./deploy.sh
 
 Los datos no se tocan: viven en el volume `pg_data`, no en la imagen.
 
+### Levantar y bajar el stack a mano (manual deployment)
+
+Para detener o arrancar el proyecto **sin desplegar una versión nueva**
+(liberar RAM, probar cambios locales, apagarlo de noche):
+
+```bash
+cd ~/coffee/CoffeeProyect-web   # en la PC vieja; en la máquina de desarrollo, la ruta del repo
+
+# Apagar (conserva los datos en los volumes)
+docker compose -f docker-compose.prod.yml down
+
+# Arrancar (los datos vuelven intactos)
+docker compose -f docker-compose.prod.yml up -d
+
+# Arrancar reconstruyendo imágenes (tras cambios de código en web o backend)
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+- Con el stack arriba, el sitio está en **http://localhost** (Caddy `:80`).
+- `down` libera el puerto 80 y ~1–1.5 GB de RAM; **no** pierde datos.
+- ⚠️ `down -v` **sí borra los datos** (los volumes): solo si quieres empezar de cero.
+
+En la **máquina de desarrollo** además hay servicios systemd para el día a día
+(no existen en la PC vieja):
+
+```bash
+systemctl --user stop coffee-api coffee-web      # apagar
+systemctl --user start coffee-api coffee-web     # arrancar
+systemctl --user is-active coffee-api coffee-web # estado
+```
+
+`coffee-web` corre con `next start` (compilado, sin hot-reload); para **editar
+código** del front se usa `npm run dev` con `coffee-api` arriba.
+
+Regla simple:
+- Probar producción / ensayar el deploy → stack Docker.
+- Editar código del día a día → `coffee-api` + `npm run dev`.
+
 ### Estado y logs
 
 ```bash
