@@ -1,7 +1,13 @@
 # Plan: Login con Google + Pagos en línea (Wompi)
 
-> **Estado (2026-12-14): plan creado, sin empezar.** Pendiente: solicitudes del
-> dueño (sección "Solicitudes" de cada feature) para poder arrancar.
+> **Estado (2026-11-23): Feature A implementada en ambos repos, pendiente de
+> merge** (espera el E2E real con OAuth Client ID). Backend: PR
+> [CoffeeProyect#4](https://github.com/bfprietoc/CoffeeProyect/pull/4) (CI verde).
+> Web: PR [CoffeeProyect-web#5](https://github.com/bfprietoc/CoffeeProyect-web/pull/5)
+> (CI quality+e2e verde). Feature B sin empezar. Pendiente del dueño: OAuth
+> Client ID de Google (solicitud Feature A) y cuenta Wompi sandbox (Feature B).
+> Nota: el backend ganó CI (`quality`: vet+build+test -race) en
+> [CoffeeProyect#5](https://github.com/bfprietoc/CoffeeProyect/pull/5), mergeado a develop.
 >
 > Dos features nuevas, una por rama, siguiendo el flujo estándar:
 > rama `feat/*` desde `develop` → PR (CI verde) → merge squash a `develop`
@@ -13,7 +19,7 @@
 
 ---
 
-## Contexto (verificado en el código, 2026-12-14)
+## Contexto (verificado en el código, 2026-11-23)
 
 ### Auth actual (backend Go, repo `CoffeeProyect`)
 
@@ -84,29 +90,30 @@ flujo actual de tokens).
   4. "Orígenes autorizados de JavaScript": `http://localhost:3000` (dev) y la URL de producción (`https://wake-agent.taile51409.ts.net` hoy; el dominio público cuando se compre).
   5. Entregar el **Client ID** (formato `xxx.apps.googleusercontent.com`) → va a `.env` del backend como `GOOGLE_CLIENT_ID` y al front como `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
 
-### Pasos — Backend (repo `CoffeeProyect`)
+### Pasos — Backend (repo `CoffeeProyect`) — PR #4, CI verde
 
-- [ ] Dependencia para validar el ID token de Google (`golang.org/x/oauth2` + verificación JWT contra JWKS de Google, o `google.golang.org/api/idtoken`).
-- [ ] Método en `UserService`: `RegisterOrLoginWithGoogle(email, name, picture)` → busca por email; si no existe crea usuario sin password (validación: `password` mínimo solo aplica al register con contraseña).
-- [ ] Endpoint `POST /auth/google` en `AuthHandler`: decodifica `{credential}`, valida token (emisor `accounts.google.com` / `https://accounts.google.com`, aud = `GOOGLE_CLIENT_ID`), extrae claims, llama al servicio, responde `{user, tokens}` (mismo shape que login).
-- [ ] Merge de carrito invitado: reutilizar el bloque existente del `Login` (header `X-Session-ID`).
-- [ ] Config: leer `GOOGLE_CLIENT_ID` desde env en `main.go`/config; si está vacío, el endpoint responde 503 `GOOGLE_AUTH_DISABLED` (permite desplegar sin romper).
-- [ ] Tests unitarios: token inválido/expirado/aud errada → 401; email nuevo → crea usuario + tokens; email existente → mismo usuario; merge de carrito invitado.
-- [ ] `.env.example` / docs: documentar `GOOGLE_CLIENT_ID`.
+- [x] Verificación del ID token contra el JWKS de Google: `internal/auth/google.go` con `golang-jwt/v5` (ya en el proyecto) + fetch del JWKS con cache TTL 10 min. **Sin dependencias nuevas** (se descartaron `golang.org/x/oauth2` y `google.golang.org/api`: el primero no trae el paquete idtoken en versiones compatibles con Go 1.25; el segundo, por su peso).
+- [x] Método en `UserService`: `RegisterOrLoginWithGoogle(email, name)` → busca por email; si no existe crea usuario sin password (hash vacío; fallback de nombre desde el email). `picture` quedó fuera: el modelo User no la tiene (se puede agregar después si se quiere mostrar avatar).
+- [x] Endpoint `POST /auth/google` en `AuthHandler`: decodifica `{credential}`, valida token (RS256, emisor `accounts.google.com` o `https://accounts.google.com`, exp, aud = `GOOGLE_CLIENT_ID`), llama al servicio, responde `{user, tokens}` (mismo shape que login).
+- [x] Merge de carrito invitado: reutiliza el bloque del `Login` (header `X-Session-ID`).
+- [x] Config: `GOOGLE_CLIENT_ID` desde env; si está vacío, 503 `GOOGLE_AUTH_DISABLED` + warning al arrancar.
+- [x] Tests: 14 nuevos — 6 de verificación JWT con JWKS fake (válido, aud errada, issuer errado, expirado, kid desconocido, sin email), 5 de servicio (nuevo/existente/fallback/validación), 3 de handler (503, 400, 401) + 2 de flujo (nuevo usuario con token válido, mismo user ID que registro previo por email).
+- [x] `.env.example` + README (tabla de env): `GOOGLE_CLIENT_ID` documentado.
 
-### Pasos — Frontend (repo `CoffeeProyect-web`)
+### Pasos — Frontend (repo `CoffeeProyect-web`) — PR #5, CI quality+e2e verde
 
-- [ ] `NEXT_PUBLIC_GOOGLE_CLIENT_ID` en `.env` (y `.env.example`).
-- [ ] Endpoint `googleLogin(credential)` en `src/lib/api/endpoints.ts`.
-- [ ] Componente `GoogleLoginButton`: carga Google Identity Services (`accounts.google.com/gsi/client`), muestra el botón oficial, devuelve el `credential`.
-- [ ] Integrar en `/login` y `/register`: botón sobre el formulario, separador "o"; al recibir credential → `googleLogin` → `setTokens` → redirect a `next` (mismo comportamiento que login; resetear estado del formulario como en el submit actual).
-- [ ] Si `NEXT_PUBLIC_GOOGLE_CLIENT_ID` no está definido → **no renderizar el botón** (CI/E2E corren sin la key).
-- [ ] Tests: unit (botón oculto sin client id; flujo con GIS mockeado) + E2E (sin key: el botón no aparece y el login por email sigue funcionando — regression).
+- [x] `NEXT_PUBLIC_GOOGLE_CLIENT_ID` documentado en `.env.example` (el valor real se pone en el `.env` local/prod cuando exista el Client ID).
+- [x] Endpoint `googleLogin(credential)` en `src/lib/api/endpoints.ts`.
+- [x] Componente `GoogleLoginButton` (`src/components/auth/google-login-button.tsx`): carga Google Identity Services una sola vez, botón oficial (`theme: outline`, pill), callback transmite el `credential`. Si el script no carga (sin red/bloqueado) nunca rompe la página.
+- [x] Integrado en `/login` (texto `continue_with`) y `/register` (`signup_with`): botón + separador "o" sobre el formulario; al recibir credential → `googleLogin` → `setTokens` → redirect a `next` (mismo post-proceso que el submit actual, con reset del formulario).
+- [x] Sin `NEXT_PUBLIC_GOOGLE_CLIENT_ID` → no renderiza nada (CI/E2E corren sin la key).
+- [x] Tests: 4 unitarios (oculto sin key; configura GIS con client ID y renderiza; transmite el credential del callback; script fallido no rompe) + E2E de regresión (sin key: botón ausente en /login y /register, formulario por email intacto). Códigos `INVALID_GOOGLE_TOKEN`/`GOOGLE_AUTH_DISABLED` agregados a `ApiErrorCode` con mensajes específicos.
 
 ### Validación (E2E / manual)
 
-- [ ] E2E en CI: sin `GOOGLE_CLIENT_ID` el botón no existe; login/register por email intactos.
-- [ ] Manual (con la key real en local): entrar con Google → sesión creada; cerrar sesión y entrar con email+password del mismo email → **mismo** usuario (verificar en `/account`); carrito de invitado se conserva al entrar con Google.
+- [x] E2E en CI: sin `GOOGLE_CLIENT_ID` el botón no existe; login/register por email intactos (PR web #5, job e2e verde).
+- [ ] **Manual (con la key real en local)** — pendiente del OAuth Client ID: entrar con Google → sesión creada; cerrar sesión y entrar con email+password del mismo email → **mismo** usuario (verificar en `/account`); carrito de invitado se conserva al entrar con Google.
+- [ ] **Merge de ambos PRs** (backend #4 + web #5) al cerrar la validación manual, y después PR de release.
 
 ---
 
@@ -118,7 +125,7 @@ dominante en Colombia, ~45% de los pagos digitales). Al pagar con PSE el
 banco del cliente autentica con **Llave Virtual/Móvil** — viene incluido en
 el flujo PSE de Wompi, **no requiere integración aparte**.
 
-### Por qué Wompi (investigado 2026-12-14)
+### Por qué Wompi (investigado 2026-11-23)
 
 | Criterio | Wompi ⭐ | Mercado Pago | Bold | PayU |
 |---|---|---|---|---|
@@ -228,8 +235,15 @@ Reglas de negocio:
 
 > Formato: `fecha — feature — qué pasó (commit/PR)`.
 
-- 2026-12-14 — Plan creado (investigación de auth Google + pasarelas Colombia
+- 2026-11-23 — Plan creado (investigación de auth Google + pasarelas Colombia
   completada; Wompi elegida como pasarela). Sin código todavía.
+- 2026-11-23 — Backend Feature A implementado: PR CoffeeProyect#4 (14 tests
+  nuevos, CI verde). El backend no tenía CI: se creó el workflow `quality`
+  (vet+build+test -race, Go 1.25) en PR CoffeeProyect#5, mergeado a develop.
+- 2026-11-23 — Frontend Feature A implementado: PR CoffeeProyect-web#5
+  (4 tests unit + E2E regresión; local: lint/typecheck/build limpios, unit
+  143/143, E2E 19/19 contra el stack real). Ambos PRs pendientes de merge:
+  falta la validación manual con el OAuth Client ID real (solicitud del dueño).
 
 ## Preguntas abiertas
 
