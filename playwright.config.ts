@@ -7,6 +7,14 @@ import { defineConfig } from "@playwright/test";
  * (services), el backend (auto-migra al arrancar) + seed, y `next start`.
  * En local se asume que el stack ya está corriendo (los servicios systemd
  * `coffee-api`/`coffee-web` de esta máquina) con la DB seedeada.
+ *
+ * Mantenimiento local (los pedidos consumen stock): tras una corrida,
+ * restaurar el stock del seed en la DB de dev (El Paraíso 92 = 12,
+ * Finca La Esperanza = 8, Huila = 25, Nariño = 6; Antioquia queda en 0 a
+ * propósito). Si el stock se cambió por SQL (pasa de largo la
+ * invalidación de la API), borrar la cache de Redis del backend
+ * (`cache:coffee*`, TTL 10 min) y reiniciar `coffee-web` (la ficha
+ * cachea con `use cache`).
  */
 export default defineConfig({
   testDir: "./e2e",

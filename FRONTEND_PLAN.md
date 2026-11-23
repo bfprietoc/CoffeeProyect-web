@@ -94,6 +94,11 @@ ahí desde el **2026-11-20** (release `v1.0.0`), accesible en el tailnet en
 + Cloudflare Tunnel para acceso público. El `docker system prune` por deploy
 es obligatorio (lo hace `deploy.sh`) para no llenar el disco con imágenes.
 
+> **Estado (2026-11-22):** `v1.1.0` (ronda 1) está liberada y validada en
+> local en omarchy-x1 (E2E 18/18 contra el stack real); wake-agent sigue
+> en `v1.0.0` — el deploy queda pendiente (se prefiere validar en local
+> antes; el `.env` de la PC ya tiene la URL correcta).
+
 **Arquitectura (un solo Docker Compose en la mini PC):**
 
 ```
@@ -154,11 +159,17 @@ hay stack) → `docker compose up -d --build` → caddy reload →
 `docker system prune`. El CI (GitHub Actions) valida lint, typecheck, build
 y E2E; el deploy es manual con el script.
 
-**Estrategia de ramas (2026-11-19):** `develop` = trabajo diario (ambos
-repos), `main` = producción (lo que corre en la PC; de ahí hace pull
-`deploy.sh`), tags `vX.Y.Z` por release. El CI corre en `main` y
-`develop`. El `master` viejo del backend (reliquia del scaffold) se
-eliminó: no hay rama aparte, `main` es la "master".
+**Estrategia de ramas (2026-11-19, actualizada 2026-11-22):** `develop`
+= trabajo diario (ambos repos), `main` = producción (lo que corre en la
+PC; de ahí hace pull `deploy.sh`), tags `vX.Y.Z` por release. El CI corre
+en `main`, `develop` y PRs. El `master` viejo del backend (reliquia del
+scaffold) se eliminó: no hay rama aparte, `main` es la "master". Desde el
+2026-11-22 `main` está **protegida** en ambos repos (ruleset
+`proteger-main`: PR obligatorio, checks quality+e2e en web, sin force
+push ni borrado): la única puerta a `main` es un **PR de release**
+`develop` → `main` (ver "Releases" en DEPLOY.md). El repo web es público
+por eso (GitHub no permite reglas de ramas en repos privados del plan
+Free).
 
 > **Guía completa para la máquina de despliegue: [`DEPLOY.md`](./DEPLOY.md)** —
 > setup one-time (Docker + buildx, deploy keys de GitHub, `.env`, primer
