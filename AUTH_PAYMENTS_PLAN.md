@@ -4,8 +4,12 @@
 > merge** (espera el E2E real con OAuth Client ID). Backend: PR
 > [CoffeeProyect#4](https://github.com/bfprietoc/CoffeeProyect/pull/4) (CI verde).
 > Web: PR [CoffeeProyect-web#5](https://github.com/bfprietoc/CoffeeProyect-web/pull/5)
-> (CI quality+e2e verde). Feature B sin empezar. Pendiente del dueño: OAuth
-> Client ID de Google (solicitud Feature A) y cuenta Wompi sandbox (Feature B).
+> (CI quality+e2e verde). Feature B sin empezar.
+>
+> **PUNTO ACTUAL:** el dueño crea el OAuth Client ID de Google (sección
+> Solicitudes de Feature A, pasos actualizados). Con el Client ID en mano se
+> corre el plan de pruebas real (sección Validación) y se mergan los PRs.
+> Pendiente del dueño después: cuenta Wompi sandbox (Feature B).
 > Nota: el backend ganó CI (`quality`: vet+build+test -race) en
 > [CoffeeProyect#5](https://github.com/bfprietoc/CoffeeProyect/pull/5), mergeado a develop.
 >
@@ -83,12 +87,18 @@ flujo actual de tokens).
 
 ### Solicitudes (solo el dueño puede hacerlas)
 
-- [ ] **Crear OAuth Client ID en Google Cloud Console** (gratis, ~5 min):
-  1. [console.cloud.google.com](https://console.cloud.google.com) → crear/elegir un proyecto (p. ej. `coffee-proyect`).
-  2. "APIs y servicios" → "IDs de OAuth" → configurar pantalla de consentimiento (tipo **Externo**, nombre de la app, email del dueño). No hace falta habilitar APIs.
+- [ ] **Crear OAuth Client ID en Google Cloud Console** (gratis, ~5 min) — **PUNTO ACTUAL**: todo lo demás de la Feature A está implementado y testeado; esto es lo único que falta para la validación real.
+  - **No se necesita una cuenta de Google nueva**: con el Gmail personal basta. Lo nuevo es un *proyecto* en Google Cloud (contenedor lógico, gratis) y la credencial OAuth dentro de él.
+  1. [console.cloud.google.com](https://console.cloud.google.com) → **crear proyecto** (p. ej. `coffee-proyect`).
+  2. "APIs y servicios" → "IDs de OAuth" → configurar pantalla de consentimiento (tipo **Externo**, nombre = el de la cafetería — es lo que verá el cliente en el popup; ver pregunta abierta sobre la marca). No hace falta habilitar APIs.
   3. "Credenciales" → "Crear credenciales" → **ID de cliente de OAuth** → tipo **Aplicación web**.
-  4. "Orígenes autorizados de JavaScript": `http://localhost:3000` (dev) y la URL de producción (`https://wake-agent.taile51409.ts.net` hoy; el dominio público cuando se compre).
-  5. Entregar el **Client ID** (formato `xxx.apps.googleusercontent.com`) → va a `.env` del backend como `GOOGLE_CLIENT_ID` y al front como `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
+  4. "Orígenes autorizados de JavaScript":
+     - `http://localhost:3000` (dev)
+     - `http://localhost:3001` (E2E local)
+     - `https://wake-agent.taile51409.ts.net` (producción actual)
+     - *(después: el dominio público, cuando se compre)*
+  5. Entregar el **Client ID** (formato `xxx.apps.googleusercontent.com`) → va al `.env` del backend como `GOOGLE_CLIENT_ID` y al front como `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
+  - **Si al probar sale `403 access_denied` / "no está en la lista"**: el consent screen está en modo desarrollo (solo permite ~10 cuentas). Solución: *IDs de OAuth → Usuarios de prueba* → agregar las cuentas que vayan a probar. Para uso propio/familiar sobra; para público general se pasa la app a "En producción" desde el mismo menú.
 
 ### Pasos — Backend (repo `CoffeeProyect`) — PR #4, CI verde
 
@@ -112,8 +122,14 @@ flujo actual de tokens).
 ### Validación (E2E / manual)
 
 - [x] E2E en CI: sin `GOOGLE_CLIENT_ID` el botón no existe; login/register por email intactos (PR web #5, job e2e verde).
-- [ ] **Manual (con la key real en local)** — pendiente del OAuth Client ID: entrar con Google → sesión creada; cerrar sesión y entrar con email+password del mismo email → **mismo** usuario (verificar en `/account`); carrito de invitado se conserva al entrar con Google.
-- [ ] **Merge de ambos PRs** (backend #4 + web #5) al cerrar la validación manual, y después PR de release.
+- [ ] **E2E real con la key** — pendiente del OAuth Client ID (solicitud de arriba). Con el Client ID en mano, el plan de pruebas:
+  1. Backend (rama `feat/google-login` local) arranca con `GOOGLE_CLIENT_ID=…` en el `.env` de dev; web con `NEXT_PUBLIC_GOOGLE_CLIENT_ID=…` → el botón aparece en /login y /register.
+  2. **Login Google → sesión**: entrar con la cuenta de prueba → redirect a `/` autenticado ("Hola, <nombre>").
+  3. **Mismo usuario por dos vías**: cerrar sesión → entrar con email+password de una cuenta existente cuyo email sea el de Google → mismo `user.id` (verificar en `/account` y en la DB).
+  4. **Merge carrito invitado**: como invitado, agregar 1 café al carrito → entrar con Google → el ítem aparece en el carrito de la sesión.
+  5. **Registro con Google** (desde /register): cuenta nueva → se crea sin password; después puede entrar también por Google (no por contraseña: el hash está vacío).
+  6. **Errores**: con `GOOGLE_CLIENT_ID` ausente en el backend → 503 y mensaje "no está disponible"; token manipulado → 401.
+- [ ] **Merge de ambos PRs** (backend #4 + web #5) al cerrar la validación, y después PR de release `develop` → `main` + tag.
 
 ---
 
@@ -244,6 +260,11 @@ Reglas de negocio:
   (4 tests unit + E2E regresión; local: lint/typecheck/build limpios, unit
   143/143, E2E 19/19 contra el stack real). Ambos PRs pendientes de merge:
   falta la validación manual con el OAuth Client ID real (solicitud del dueño).
+- 2026-11-23 — Plan actualizado al punto de pruebas: pasos del OAuth Client ID
+  detallados (sin cuenta Google nueva; orígenes localhost:3000/3001 + tailnet;
+  nota de "usuarios de prueba" para el 403) y plan de pruebas real en 6 pasos
+  (login Google, mismo usuario por dos vías, merge carrito, registro con
+  Google, errores 503/401).
 
 ## Preguntas abiertas
 
