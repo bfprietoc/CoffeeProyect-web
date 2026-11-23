@@ -10,7 +10,11 @@
 > Al completar un ítem se marca ✅ y se registra en `FRONTEND_PLAN.md`.
 > El trabajo se hace en `develop`; release a `main` al cerrar la ronda.
 > Flujo de esta ronda: rama feature desde `develop` → PR (CI verde) →
-> merge squash a `develop` → release `main` + tag.
+> merge squash a `develop` → **PR de release `develop` → `main`** (CI sobre
+> main) → merge ff + tag. `main` está protegida en ambos repos (ruleset
+> "proteger-main", 2026-11-22): PR obligatorio, checks quality+e2e (web),
+> sin force push ni borrado. El repo web pasó a ser público para poder
+> protegerlo (el backend ya lo era).
 
 ---
 
