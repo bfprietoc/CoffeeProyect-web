@@ -11,10 +11,13 @@
 > El trabajo se hace en `develop`; release a `main` al cerrar la ronda.
 > Flujo de esta ronda: rama feature desde `develop` → PR (CI verde) →
 > merge squash a `develop` → **PR de release `develop` → `main`** (CI sobre
-> main) → merge ff + tag. `main` está protegida en ambos repos (ruleset
+> main) → merge rebase + alinear `develop` con `main` (`reset --hard` +
+> force push) + tag. `main` está protegida en ambos repos (ruleset
 > "proteger-main", 2026-11-22): PR obligatorio, checks quality+e2e (web),
 > sin force push ni borrado. El repo web pasó a ser público para poder
-> protegerlo (el backend ya lo era).
+> protegerlo (el backend ya lo era). Nota: la API de GitHub no expone
+> fast-forward; el merge rebase reescribe el SHA, de ahí el paso de
+> alineación de `develop`.
 
 ---
 
