@@ -16,7 +16,9 @@ export type ApiErrorCode =
   | "BAD_REQUEST"
   | "INVALID_INPUT"
   | "UNAVAILABLE"
-  | "INTERNAL_ERROR";
+  | "INTERNAL_ERROR"
+  | "INVALID_GOOGLE_TOKEN"
+  | "GOOGLE_AUTH_DISABLED";
 
 export interface ApiErrorBody {
   error: string;

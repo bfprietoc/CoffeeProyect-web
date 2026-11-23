@@ -49,6 +49,11 @@ export const register = (body: RegisterRequest) =>
 export const login = (body: LoginRequest) =>
   api.post<AuthResponse>("/auth/login", body, { withAuth: false });
 
+// credential = ID token (JWT) emitido por Google Identity Services.
+// El backend lo valida contra el JWKS de Google; responde igual que login.
+export const googleLogin = (credential: string) =>
+  api.post<AuthResponse>("/auth/google", { credential }, { withAuth: false });
+
 // ---------- cart (invitado o usuario) ----------
 
 export const getCart = () => api.get<Cart>("/cart");

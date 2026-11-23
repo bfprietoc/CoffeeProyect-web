@@ -45,4 +45,17 @@ test.describe("Auth + merge del carrito invitado", () => {
     await page.getByRole("button", { name: "Ingresar" }).click();
     await expect(page.getByText(/Correo o contraseña incorrectos/)).toBeVisible();
   });
+
+  // Regresión (feat/google-login): en CI no hay NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+  // así que el botón de Google no debe existir y el flujo por email funciona
+  // igual. Con la key real, el flujo Google se valida manualmente (plan
+  // AUTH_PAYMENTS_PLAN.md, Feature A → Validación).
+  test("sin NEXT_PUBLIC_GOOGLE_CLIENT_ID no aparece el botón de Google", async ({ page }) => {
+    for (const path of ["/login", "/register"]) {
+      await page.goto(path);
+      await expect(page.getByTestId("google-login-button")).toHaveCount(0);
+      // el formulario por email sigue intacto
+      await expect(page.getByLabel("Correo electrónico")).toBeVisible();
+    }
+  });
 });
