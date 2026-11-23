@@ -104,6 +104,8 @@ etc.). Se agregan aquí al llegar y se priorizan antes de cerrar la ronda.
 
 ## Cierre de la ronda
 
-1. Ítems 1 y 2 completados + E2E verde en `develop`.
-2. Registro en `FRONTEND_PLAN.md` (sección de fases).
-3. Release: `main` + tag `v1.1.0` → `./deploy.sh` en wake-agent.
+1. ✅ Ítems 1 y 2 completados + E2E verde en `develop` (PR #1, squash).
+2. ✅ Registro en `FRONTEND_PLAN.md` (sección de fases).
+3. ✅ Release: `main` + tag `v1.1.0` (2026-11-20).
+4. ⏳ `./deploy.sh` en wake-agent: pendiente — se valida primero en local
+   (omarchy-x1, E2E 18/18, 2026-11-22); wake-agent sigue en `v1.0.0`.

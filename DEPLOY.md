@@ -86,6 +86,11 @@ Ambas están registradas como deploy key *"wake-agent (deploy, read-only)"*
 en cada repo (Settings → Deploy keys; se pueden revocar en cualquier momento).
 Solo permiten `git clone`/`pull`: **no hay forma de empujar desde la PC**.
 
+> Nota (2026-11-22): ambos repos son **públicos** (el web pasó a público
+> para poder proteger `main` con rules; GitHub no lo permite en repos
+> privados del plan Free). Las deploy keys ya no son necesarias, pero se
+> conservan (inofensivas).
+
 `~/.ssh/config` en wake-agent:
 
 ```
@@ -253,17 +258,33 @@ El `tailscale serve` puede seguir activo como acceso privado en paralelo.
 
 ## Operación diaria
 
-### Releases (trabajo en `develop` → `main` + tag)
+### Releases (feature → develop → PR de release → `main` + tag)
 
 El trabajo diario se hace en **`develop`** (ambos repos); el CI corre en
-`main` y `develop`. Cuando algo está listo para producción:
+`main`, `develop` y PRs. Desde el 2026-11-22, `main` está **protegida**
+en ambos repos (ruleset `proteger-main`): PR obligatorio, checks
+`quality`+`e2e` (web), sin force push ni borrado — **no se puede hacer
+push directo a `main`** (ni desde la laptop).
 
-1. En tu laptop, en cada repo con cambios:
+Cuando algo está listo para producción:
+
+1. En tu laptop, en cada repo con cambios — PR de feature → `develop`:
    ```bash
-   git checkout main && git merge --ff-only develop && git push origin main
-   git tag -a v1.1.0 -m "Fase X: resumen" && git push origin v1.1.0
+   git checkout -b feature/xxx develop
+   # ... trabajo + tests ...
+   git push -u origin feature/xxx
+   gh pr create --base develop          # CI verde →
+   gh pr merge <n> --squash --delete-branch
    ```
-2. En **wake-agent**:
+2. PR de release `develop` → `main` (el CI corre sobre main):
+   ```bash
+   gh pr create --base main             # esperar quality + e2e verdes
+   gh pr merge <n> -r                   # rebase (la API no expone ff)
+   git fetch && git checkout develop
+   git reset --hard origin/main && git push -f origin develop  # alinear
+   git tag -a v1.2.0 -m "Ronda X: resumen" && git push origin v1.2.0
+   ```
+3. En **wake-agent**:
 
 ```bash
 cd ~/coffee/CoffeeProyect-web && ./deploy.sh
@@ -280,13 +301,15 @@ versión y a dónde volver en un rollback.
 
 ### Rollback
 
-Recomendado — revertir en `main` desde tu laptop (la rama de la PC nunca
-se desalinea):
+Recomendado — revertir en `develop` y pasar por el flujo de release
+(desde 2026-11-22 `main` está protegida: no hay push directo):
 
 ```bash
-git checkout main
+git checkout develop
 git revert <commit-malo>        # o: git revert v1.0.0..v1.1.0 (toda la release)
-git push origin main
+git push origin develop
+gh pr create --base main        # CI verde → gh pr merge <n> -r
+# ... alinear develop con main (ver "Releases") y tag si corresponde
 # en wake-agent:
 cd ~/coffee/CoffeeProyect-web && ./deploy.sh
 ```
