@@ -244,7 +244,8 @@ eliminó: no hay rama aparte, `main` es la "master".
 Plan en [`FEATURES_PLAN.md`](./FEATURES_PLAN.md) (ronda 1; detectado en la
 app desplegada). Flujo: rama feature desde `develop` → PR con CI verde
 (quality + E2E) → merge squash a `develop` → **PR de release `develop` →
-`main`** (CI sobre main) → merge ff + tag. Desde 2026-11-22 `main` está
+`main`** (CI sobre main) → merge rebase + alinear `develop` con `main`
+(`reset --hard` + force push) + tag. Desde 2026-11-22 `main` está
 protegida en ambos repos (ruleset "proteger-main": PR obligatorio, checks
 quality+e2e en web, sin force push ni borrado); el repo web pasó a público
 para poder aplicarla.
