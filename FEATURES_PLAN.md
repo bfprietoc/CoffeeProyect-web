@@ -17,7 +17,8 @@
 > sin force push ni borrado. El repo web pasó a ser público para poder
 > protegerlo (el backend ya lo era). Nota: la API de GitHub no expone
 > fast-forward; el merge rebase reescribe el SHA, de ahí el paso de
-> alineación de `develop`.
+> alineación de `develop`. Cambios puros de docs (planes, README): commit
+> directo a `develop` (sin rama feature) + PR de release.
 
 ---
 
