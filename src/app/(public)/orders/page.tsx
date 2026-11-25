@@ -5,6 +5,7 @@ import { useMounted } from "@/lib/hooks/use-mounted";
 import { formatPrice } from "@/lib/format";
 import { useIsAuthenticated, useOrders } from "@/lib/query/orders";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
+import { PaymentBadge } from "@/components/orders/payment-badge";
 import { LoginPrompt } from "@/components/layout/login-prompt";
 import { Button } from "@/components/ui/button";
 
@@ -91,6 +92,7 @@ export default function OrdersPage() {
               </p>
             </div>
 
+            <PaymentBadge status={order.payment_status} />
             <OrderStatusBadge status={order.status} />
 
             <span className="w-24 text-right font-medium tabular-nums">

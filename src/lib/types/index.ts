@@ -3,6 +3,7 @@ export * from "./cart";
 export * from "./checkout";
 export * from "./coffee";
 export * from "./order";
+export * from "./payment";
 export * from "./stock";
 export * from "./user";
 export * from "./waitlist";
@@ -16,7 +17,12 @@ export type ApiErrorCode =
   | "BAD_REQUEST"
   | "INVALID_INPUT"
   | "UNAVAILABLE"
-  | "INTERNAL_ERROR";
+  | "INTERNAL_ERROR"
+  | "PAYMENTS_DISABLED"
+  | "PAYMENT_ALREADY_PAID"
+  | "PAYMENT_UNAVAILABLE"
+  | "PAYMENT_REQUIRED"
+  | "BAD_SIGNATURE";
 
 export interface ApiErrorBody {
   error: string;

@@ -1,13 +1,16 @@
 "use client";
 
-import { Suspense, use } from "react";
+import { Suspense, use, useEffect } from "react";
 import Link from "next/link";
 import { ApiError } from "@/lib/api/client";
 import { useMounted } from "@/lib/hooks/use-mounted";
+import { useSearchParams } from "next/navigation";
 import { formatPrice } from "@/lib/format";
 import type { Order } from "@/lib/types";
 import { useIsAuthenticated, useOrder } from "@/lib/query/orders";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
+import { PaymentBadge } from "@/components/orders/payment-badge";
+import { PaymentSection } from "@/components/orders/payment-section";
 import { CancelOrderButton } from "@/components/orders/cancel-order-button";
 import { LoginPrompt } from "@/components/layout/login-prompt";
 import { Button } from "@/components/ui/button";
@@ -47,6 +50,15 @@ function OrderDetail({ id }: { id: string }) {
   const mounted = useMounted();
   const authed = useIsAuthenticated();
   const order = useOrder(id);
+  const searchParams = useSearchParams();
+
+  // Wompi redirige al volver del portal con ?payment=1 — el estado real
+  // del pago lo pone el webhook; aquí solo refetcheamos para verlo.
+  const justPaid = searchParams.get("payment") === "1";
+  useEffect(() => {
+    if (justPaid) void order.refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [justPaid]);
 
   if (!mounted) return <OrderDetailSkeleton />;
 
@@ -101,7 +113,10 @@ function OrderDetail({ id }: { id: string }) {
             {dateFmt.format(new Date(o.created_at))}
           </p>
         </div>
-        <OrderStatusBadge status={o.status} />
+        <div className="flex items-center gap-2">
+          <PaymentBadge status={o.payment_status} />
+          <OrderStatusBadge status={o.status} />
+        </div>
       </div>
 
       <section className="mt-6 rounded-xl border p-4">
@@ -146,6 +161,8 @@ function OrderDetail({ id }: { id: string }) {
       <div className="mt-6">
         <CancelOrderButton orderId={o.id} status={o.status} />
       </div>
+
+      <PaymentSection order={o} />
     </div>
   );
 }

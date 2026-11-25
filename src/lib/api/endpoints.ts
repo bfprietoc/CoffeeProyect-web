@@ -13,6 +13,7 @@ import type {
   CreateCoffeeRequest,
   LoginRequest,
   Order,
+  PaymentCheckoutParams,
   PlaceOrderRequest,
   RegisterRequest,
   SetQuantityRequest,
@@ -88,6 +89,10 @@ export const listOrders = () => api.get<Order[]>("/orders");
 export const getOrder = (id: string) => api.get<Order>(`/orders/${id}`);
 
 export const cancelOrder = (id: string) => api.post<Order>(`/orders/${id}/cancel`);
+
+// Pago con Wompi: devuelve los parámetros del Web Checkout (server-side).
+export const createPayment = (id: string) =>
+  api.post<PaymentCheckoutParams>(`/orders/${id}/payment`);
 
 // ---------- waitlist (invitado o usuario) ----------
 
