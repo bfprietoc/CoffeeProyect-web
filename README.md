@@ -17,6 +17,10 @@ en PRs pendientes de validación con credenciales reales — ver
   Wompi (backend PR [CoffeeProyect#6](https://github.com/bfprietoc/CoffeeProyect/pull/6)
   + web PR [#6](https://github.com/bfprietoc/CoffeeProyect-web/pull/6)).
 
+**¿Querés activar login con Google y pagos Wompi?** →
+[SETUP_GUIDE.md](./SETUP_GUIDE.md) (guía operativa unificada: checklist de
+credenciales, variables, pruebas y usuarios de prueba).
+
 Plan completo de features y fases: [FRONTEND_PLAN.md](./FRONTEND_PLAN.md).
 
 ## Stack
