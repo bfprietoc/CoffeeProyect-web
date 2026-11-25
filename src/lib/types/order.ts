@@ -7,6 +7,12 @@ export type OrderStatus =
   | "delivered"
   | "cancelled";
 
+/** Estado de pago del pedido (espejo de internal/domain/order.go). */
+export type PaymentStatus = "pending" | "paid" | "failed";
+
+/** Estados de pago desde los que el cliente puede reintentar. */
+export const RETRYABLE_PAYMENT_STATUSES: PaymentStatus[] = ["pending", "failed"];
+
 export const ORDER_STATUSES: OrderStatus[] = [
   "confirmed",
   "processing",
@@ -39,6 +45,8 @@ export interface Order {
   currency: string;
   status: OrderStatus;
   tracking_number?: string; // omitempty en el backend
+  payment_status: PaymentStatus;
+  paid_at?: string; // omitempty — solo cuando payment_status = "paid"
   created_at: string;
   updated_at: string;
 }

@@ -8,6 +8,10 @@ import type { Order } from "@/lib/types";
 import { renderWithQueryClient, resolvedParams } from "@/test/utils";
 import OrderDetailPage from "./page";
 
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 vi.mock("@/lib/api/endpoints", () => ({
   getOrder: vi.fn(),
   cancelOrder: vi.fn(),
@@ -33,6 +37,7 @@ const order: Order = {
   total_cents: 17000000,
   currency: "COP",
   status: "confirmed",
+  payment_status: "paid",
   created_at: "2026-11-19T12:00:00Z",
   updated_at: "2026-11-19T12:00:00Z",
 };
