@@ -1,19 +1,19 @@
 # Plan: Login con Google + Pagos en línea (Wompi)
 
-> **Estado (2026-11-23): Feature A (Google) + Feature B (Wompi) implementadas
-> en ambos repos, pendientes de merge.** Backend: PR
-> [CoffeeProyect#4](https://github.com/bfprietoc/CoffeeProyect/pull/4) (Google, CI verde) + PR
-> [#6](https://github.com/bfprietoc/CoffeeProyect/pull/6) (Wompi, sin CI verde aún).
+> **Estado (2026-11-24): Feature A (Google) + Feature B (Wompi) implementadas
+> en ambos repos, pendientes de merge/validación con credenciales reales.**
+> Backend: PR [CoffeeProyect#4](https://github.com/bfprietoc/CoffeeProyect/pull/4) (Google, CI verde) + PR
+> [#6](https://github.com/bfprietoc/CoffeeProyect/pull/6) (Wompi, CI re-corrigiéndose tras fix de rutas).
 > Web: PR [CoffeeProyect-web#5](https://github.com/bfprietoc/CoffeeProyect-web/pull/5) (Google, CI verde) + PR
-> [#6](https://github.com/bfprietoc/CoffeeProyect-web/pull/6) (Wompi).
+> [#6](https://github.com/bfprietoc/CoffeeProyect-web/pull/6) (Wompi, CI verde).
 >
 > **PUNTO ACTUAL:** el dueño entrega tres cosas, en paralelo:
 > 1. **OAuth Client ID** de Google (sección Solicitudes Feature A) → corrida del
 >    plan de pruebas real (6 pasos) → merge backend #4 + web #5 + release.
 > 2. **Cuenta Wompi sandbox + 4 credenciales** (`WOMPI_PUBLIC_KEY`,
 >    `WOMPI_INTEGRITY_SECRET`, `WOMPI_EVENT_SECRET`, `PUBLIC_BASE_URL`)
->    (sección Solicitudes Feature B) → validación manual end-to-end → merge
->    backend #6 + web #6 + release.
+>    (sección Solicitudes Feature B) → validación manual end-to-end (sección
+>    Validación) → merge backend #6 + web #6 + release.
 > 3. **Decisión de marca/dominio** (para el consent screen de Google y las
 >    URLs autorizadas).
 >
@@ -155,7 +155,7 @@ el flujo PSE de Wompi, **no requiere integración aparte**.
 | Sandbox | ✅ tarjetas de prueba | ✅ | ✅ | limitado |
 | Onboarding | self-service, claves al instante | self-service | self-service | **requiere contrato** |
 | Checkout | redirect / widget (cero scope PCI) | Checkout Pro (redirect) | link/botón | API |
-| Webhook firmado | ✅ header `wompi_hash` (HMAC-SHA256) | ✅ `x-signature` | ✅ firma secreta | — |
+| Webhook firmado | ✅ checksum SHA256 del evento (`wompi_hash` del plan viejo no aplica; verificado contra la doc oficial 2026-11-23) | ✅ `x-signature` | ✅ firma secreta | — |
 
 Ninguna pasarela cobra mensualidad ("gratuita" = solo comisión por
 transacción). Wompi: la más barata + self-service + sandbox completo.
@@ -164,39 +164,79 @@ doneapi.com / siigo.com (2025–2026).
 
 ### Solicitudes (solo el dueño puede hacerlas)
 
+> **Nota:** el panel de Wompi entrega dos secretos distintos (integrity y
+> events) — no los intercambies. Los valores descritos aquí son los de
+> **sandbox** (pruebas, gratis). Cambia a `pub_live_…`/`prod_…` al activar
+> producción.
+
 - [ ] **Crear cuenta Wompi** (gratis, self-service):
   1. [wompi.com](https://www.wompi.com) → "Comenzar" → registro con datos personales/empresa (cédula/NIT, datos bancarios para dispersión).
-  2. En el panel: copiar **API Key de sandbox** (pruebas) → `.env` del backend como `WOMPI_API_KEY`.
-  3. Configurar **webhook de sandbox** apuntando a la URL de pruebas (local: `https://<host-tailscale>/api/webhooks/wompi` o tunnel temporal) y copiar el **API Secret** (para validar `wompi_hash`) → `WOMPI_API_SECRET`.
-  4. Probar con la tarjeta de prueba de Wompi (documentada en docs.wompi.co, sección sandbox).
+  2. En el panel → Desarrolladores → **API keys**:
+     - Copiar la **Public Key** de sandbox (`pub_test_…`) → backend `WOMPI_PUBLIC_KEY`.
+     - Copiar el **Integrity Secret** (`prod_integrity_…`) → backend `WOMPI_INTEGRITY_SECRET`. **Nunca** exponer al frontend (no lleva prefijo `NEXT_PUBLIC_`).
+     - Copiar el **Events Secret** (`prod_events_…`, distinto al de integridad) → backend `WOMPI_EVENT_SECRET`.
+  3. En el panel → Desarrolladores → **Webhooks**: configurar la URL pública del webhook:
+     - Sandbox/local vía tailnet: `https://wake-agent.taile51409.ts.net/api/webhooks/wompi` (Caddy quita el prefijo `/api` y enruta al backend).
+     - *(Alternativa local sin túnel: tunnel temporal, p. ej. `cloudflared tunnel` → URL pública del equipo.)*
+  4. Completar **`PUBLIC_BASE_URL`** (URL pública del front):
+     - Prod actual: `https://wake-agent.taile51409.ts.net` (redirect del checkout → `/orders/{id}?payment=1`).
+     - Dev: `http://localhost:3001` (o `:3002` si E2E local).
+  5. Probar con la tarjeta de prueba de Wompi (documentada en docs.wompi.co, sección sandbox). **PSE no está disponible de forma fiable en sandbox** — validar PSE con una compra real de bajo valor al pasar a producción.
 - [ ] **(Más adelante, para producción):** aprobar/activar la cuenta en
-  producción del panel Wompi → `WOMPI_API_KEY`/`WOMPI_API_SECRET` de prod en
-  el `.env` de wake-agent. No bloquea el desarrollo (sandbox primero).
+  producción del panel Wompi → keys de producción (`pub_live_…`) en el
+  `.env` de wake-agent. No bloquea el desarrollo (sandbox primero).
+
+**Dónde va cada valor:**
+
+| Variable | De | A |
+|---|---|---|
+| `WOMPI_PUBLIC_KEY` | panel → API keys (`pub_test_…`) | `.env` del backend |
+| `WOMPI_INTEGRITY_SECRET` | panel → API keys (`prod_integrity_…`) | `.env` del backend (**server-side**) |
+| `WOMPI_EVENT_SECRET` | panel → API keys (`prod_events_…`) | `.env` del backend |
+| `PUBLIC_BASE_URL` | URL pública del front | `.env` del backend (`.env.local` del web para dev) |
+| `NEXT_PUBLIC_PAYMENTS_ENABLED` | este mismo plan | web: `.env.local` = `true` (CI/E2E: **no** — oculto) |
+
+> El frontend usa `NEXT_PUBLIC_PAYMENTS_ENABLED=true` para mostrar el
+> botón. Sin esa variable el botón no aparece (comportamiento actual de
+> CI/E2E). La **verdad de runtime** la da el backend: si faltan las 4
+> variables, responde 503 `PAYMENTS_DISABLED` y la UI muestra el mensaje
+> amable.
 
 ### Flujo
+
+> **Cambio de arquitectura (2026-11-23):** la doc actual de Wompi recomienda
+> el **Web Checkout** (cero PCI scope) en vez de crear la transacción
+> server-side. El backend valida el pedido y devuelve los parámetros del
+> formulario de Wompi — **no llama a ningún endpoint de Wompi**. La firma de
+> integridad se computa server-side y nunca sale del servidor.
 
 ```
 Checkout (/checkout, autenticado)
    │ 1. POST /orders  (como hoy) → pedido con payment_status = "pending"
-   │ 2. POST /orders/{id}/payment → backend crea transacción Wompi:
-   │      POST https://api.wompi.co/v1.0/test/transactions   (Bearer WOMPI_API_KEY)
-   │      { amount, description, redirect_url: /orders/{id}?payment=1,
-   │        webhook_url: https://<prod>/api/webhooks/wompi }
    ▼
-Front redirige a checkout_url (portal de Wompi)
-   │  cliente paga con tarjeta o PSE (PSE → banco → llave virtual/móvil)
+/orders/{id} (detalle) — el front renderiza PaymentSection
+   │  2. POST /orders/{id}/payment  → backend valida el pedido y devuelve
+   │      { publicKey, reference, amountInCents, currency, signature,
+   │        redirectUrl, customerEmail }
+   │      (firma = SHA256(ref + monto_en_centavos + moneda + secreto de
+   │       integridad), computada server-side)
    ▼
-Wompi: (a) redirige al cliente a redirect_url  +  (b) envía WEBHOOK
+Front renderiza un formulario GET a https://checkout.wompi.co/p/
+   │  (hidden inputs: public-key, currency, amount-in-cents, reference,
+   │   signature:integrity, redirect-url, customer-data:email)
+   ▼
+Cliente paga con tarjeta o PSE (PSE → banco → llave virtual/móvil)
    │
    ▼
-POST /webhooks/wompi (backend, SIN auth JWT — público pero firmado)
-   │  valida wompi_hash (HMAC-SHA256 con WOMPI_API_SECRET)
-   │  idempotente (mismo transaction id → 200 sin re-procesar)
-   │  status "paid"    → payment_status = "paid"  (pedido pasa a confirmed)
-   │  status "failed"  → payment_status = "failed" (se puede reintentar)
+Wompi: (a) redirige al cliente a redirect_url (?payment=1)
+        (b) envía WEBHOOK  POST /api/webhooks/wompi
+   │  → backend valida checksum (SHA256 de las propiedades del evento
+   │    + timestamp + secreto de eventos); solo transaction.updated
+   │  → idempotente por referencia; APPROVED → paid (+paid_at),
+   │                         DECLINED/ERROR/VOIDED → failed, resto → pending
    ▼
-Cliente vuelve a /orders/{id}?payment=1 → ve el estado real del pago
-(admin puede ver payment_status en la lista de pedidos)
+/orders/{id}?payment=1 → front refetchea el pedido — la fuente de verdad
+es la API; el redirect nunca se confía
 ```
 
 Reglas de negocio:
@@ -241,10 +281,14 @@ Reglas de negocio:
 
 ### Validación (sandbox, manual + E2E)
 
-- [x] Unit + firma/checksum: 21 tests en backend (incl. vector oficial Wompi) + 9 en frontend; E2E de regresión en CI del PR web #6 (sin payments activo, flujo actual intacto).
-- [ ] Local con keys sandbox: comprar → pagar con tarjeta de prueba Wompi → webhook marca `paid` → el detalle muestra "Pagado".
-- [ ] Caso de falla: tarjeta rechazada de prueba → `failed` → "Reintentar pago" funciona.
-- [x] Webhook duplicado (reenviar el mismo evento) → no duplica efectos (test idempotencia: no reescribe paid_at).
+- [x] Unit + firma/checksum: 28 tests en backend (incl. vector oficial Wompi + rutas) + 9 en frontend; E2E de regresión en CI del PR web #6 (sin payments activo, flujo actual intacto).
+- [ ] **Plan real en 6 pasos** (con las 4 credenciales sandbox + `NEXT_PUBLIC_PAYMENTS_ENABLED=true` en el front):
+  1. Backend con `.env` de sandbox (key/integrity/event/BASE_URL) + web con `NEXT_PUBLIC_PAYMENTS_ENABLED=true` → en `/orders/{id}` aparece el botón «Pagar con tarjeta o PSE».
+  2. Click → el form GET redirige a `checkout.wompi.co/p/` con los parámetros correctos (currency COP, monto en centavos, referencia `{order_id}-{unix}`).
+  3. Pagar con la tarjeta de prueba de Wompi → redirige a `/orders/{id}?payment=1` → la API muestra «Pagado» (vía webhook, no por el redirect).
+  4. Webhook duplicado (re-send del mismo evento desde el panel de Wompi) → el pedido sigue mostrado como Pagado sin duplicar efectos.
+  5. Caso de falla (tarjeta rechazada de prueba) → «Fallido» + botón «Reintentar pago» → repetir el flujo con otra tarjeta de prueba.
+  6. Cancelado: cancelar el pedido desde `/orders/{id}` y luego intentar pagar → mensaje claro (pedido indisponible).
 - [x] Webhook con checksum inválido → 401 y sin cambios (test handler + servicio).
 - [ ] PSE en sandbox (si Wompi lo habilita en pruebas; si no, validar PSE con una compra real de bajo valor al pasar a producción). PSE vía Web Checkout es automático (los bancos aparecen en el portal); el pago por API con PSE directo (`payment_method.PSE`) es otro flujo y queda fuera.
 
@@ -278,6 +322,17 @@ Reglas de negocio:
   nota de "usuarios de prueba" para el 403) y plan de pruebas real en 6 pasos
   (login Google, mismo usuario por dos vías, merge carrito, registro con
   Google, errores 503/401).
+- 2026-11-24 — Feature B implementada: backend PR #6 + web PR #6 (ambos
+  pendientes de merge). Arquitectura Web Checkout verificada contra la doc
+  oficial de Wompi: firma de integridad server-side + checkout por form GET
+  al portal (sin PCI) + webhook firmado (`transaction.updated`, checksum
+  SHA256 de propiedades del evento + timestamp + secreto de eventos). El
+  estado del pago solo cambia por el webhook; el front refetchea al volver.
+- 2026-11-24 — Bug corregido en backend PR #6: `POST /orders/{id}/payment` y
+  `POST /webhooks/wompi` nunca se registraron en `routes.go` (el handler
+  existía pero el endpoint daba 404). Se registra y se agrega
+  `routes/routes_test.go` (prueba que las rutas existen vía `routes.Register`
+  real; falla sin el registro).
 
 ## Preguntas abiertas
 
