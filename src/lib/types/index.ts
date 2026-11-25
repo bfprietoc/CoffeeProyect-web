@@ -22,7 +22,9 @@ export type ApiErrorCode =
   | "PAYMENT_ALREADY_PAID"
   | "PAYMENT_UNAVAILABLE"
   | "PAYMENT_REQUIRED"
-  | "BAD_SIGNATURE";
+  | "BAD_SIGNATURE"
+  | "INVALID_GOOGLE_TOKEN"
+  | "GOOGLE_AUTH_DISABLED";
 
 export interface ApiErrorBody {
   error: string;
