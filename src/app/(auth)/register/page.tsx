@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { ApiError } from "@/lib/api/client";
-import { register } from "@/lib/api/endpoints";
+import { googleLogin, register } from "@/lib/api/endpoints";
+import { GoogleLoginButton } from "@/components/auth/google-login-button";
 import { setTokens } from "@/lib/auth/session";
 import { useSession } from "@/lib/auth/use-session";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,26 @@ function RegisterForm() {
     setErrorMessage("");
   }
 
+  // Registro con Google: el backend crea la cuenta en el primer ingreso
+  // (sin contraseña) o entra con la existente si el email ya estaba.
+  async function handleGoogleCredential(credential: string) {
+    setErrorMessage("");
+    try {
+      const res = await googleLogin(credential);
+      setTokens(res.tokens.access_token, res.tokens.refresh_token);
+      resetForm();
+      router.push(safeNext(searchParams.get("next")));
+    } catch (err) {
+      setErrorMessage(
+        err instanceof ApiError && err.code === "INVALID_GOOGLE_TOKEN"
+          ? "No se pudo validar tu cuenta de Google. Intenta de nuevo."
+          : err instanceof ApiError && err.code === "GOOGLE_AUTH_DISABLED"
+            ? "El registro con Google no está disponible."
+            : "No se pudo crear la cuenta con Google.",
+      );
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const trimmedName = name.trim();
@@ -94,6 +115,17 @@ function RegisterForm() {
       <p className="text-sm text-muted-foreground">
         Haz seguimiento de tus pedidos y guarda tus direcciones.
       </p>
+
+      {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ? (
+        <>
+          <GoogleLoginButton onCredential={handleGoogleCredential} buttonText="signup_with" />
+          <div className="flex items-center gap-3" aria-hidden>
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground">o</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+        </>
+      ) : null}
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="register-name">Nombre</Label>
