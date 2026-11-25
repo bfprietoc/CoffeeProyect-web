@@ -22,6 +22,7 @@ const order: Order = {
   total_cents: 8500000,
   currency: "COP",
   status: "confirmed",
+  payment_status: "paid",
   created_at: "2026-11-19T12:00:00Z",
   updated_at: "2026-11-19T12:00:00Z",
 };

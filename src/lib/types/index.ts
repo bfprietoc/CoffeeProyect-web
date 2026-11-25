@@ -3,6 +3,7 @@ export * from "./cart";
 export * from "./checkout";
 export * from "./coffee";
 export * from "./order";
+export * from "./payment";
 export * from "./stock";
 export * from "./user";
 export * from "./waitlist";
@@ -17,6 +18,11 @@ export type ApiErrorCode =
   | "INVALID_INPUT"
   | "UNAVAILABLE"
   | "INTERNAL_ERROR"
+  | "PAYMENTS_DISABLED"
+  | "PAYMENT_ALREADY_PAID"
+  | "PAYMENT_UNAVAILABLE"
+  | "PAYMENT_REQUIRED"
+  | "BAD_SIGNATURE"
   | "INVALID_GOOGLE_TOKEN"
   | "GOOGLE_AUTH_DISABLED";
 

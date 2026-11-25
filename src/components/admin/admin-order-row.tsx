@@ -7,6 +7,7 @@ import { ORDER_STATUSES } from "@/lib/types";
 import { formatPrice } from "@/lib/format";
 import { useAdminUpdateOrderStatus } from "@/lib/query/admin";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
+import { PaymentBadge } from "@/components/orders/payment-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -63,9 +64,13 @@ export function AdminOrderRow({ order }: AdminOrderRowProps) {
       });
       setFeedback(`Estado actualizado a «${STATUS_LABELS[newStatus]}».`);
     } catch (err) {
-      setErrorMessage(
-        err instanceof ApiError ? err.message : "No se pudo actualizar el pedido.",
-      );
+      if (err instanceof ApiError && err.code === "PAYMENT_REQUIRED") {
+        setErrorMessage("El pedido debe pagarse antes de pasar a «En preparación».");
+      } else {
+        setErrorMessage(
+          err instanceof ApiError ? err.message : "No se pudo actualizar el pedido.",
+        );
+      }
     }
   }
 
@@ -92,6 +97,7 @@ export function AdminOrderRow({ order }: AdminOrderRowProps) {
         <p className="text-sm font-medium tabular-nums">
           {formatPrice(order.total_cents, order.currency)}
         </p>
+        <PaymentBadge status={order.payment_status} />
         <OrderStatusBadge status={order.status} />
         {order.tracking_number && (
           <span className="hidden font-mono text-xs text-muted-foreground md:inline">
