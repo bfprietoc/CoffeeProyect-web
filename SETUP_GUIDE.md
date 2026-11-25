@@ -6,11 +6,10 @@
 >
 > **Estado (2026-11-25):** ambas features están **implementadas, testeadas
 > (unit + E2E) y en PRs abiertos** — falta la creación de credenciales por el
-> dueño y la validación final. La guía está organizada en 3 fases:
+> dueño y la validación final. La guía está organizada en 2 fases:
 >
-> 1. **Fase 0** — cosas que NO dependen de credenciales (opcionales, local)
-> 2. **Fase A** — Login con Google (solo dueño)
-> 3. **Fase B** — Pagos Wompi (solo dueño)
+> 1. **Fase A** — Login con Google (solo dueño)
+> 2. **Fase B** — Pagos Wompi (solo dueño)
 >
 > Las features quedan **apagadas por diseño** hasta configurarlas: sin
 > credenciales, el login Google responde 503 y el botón de pago no aparece —
