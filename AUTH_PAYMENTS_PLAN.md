@@ -24,6 +24,10 @@
 >
 > **Cada paso se marca `[x]` al completarse** y el "Registro de avances"
 > del final se actualiza con fecha + commit.
+>
+> **Guía operativa unificada** (todo lo que hace falta para activar las dos
+> features + usuarios de prueba + estado del entorno actual):
+> [SETUP_GUIDE.md](./SETUP_GUIDE.md) — empieza ahí.
 
 ---
 
@@ -333,6 +337,13 @@ Reglas de negocio:
   existía pero el endpoint daba 404). Se registra y se agrega
   `routes/routes_test.go` (prueba que las rutas existen vía `routes.Register`
   real; falla sin el registro).
+- 2026-11-25 — Bring-up local (in-memory, sin Docker): 165 tests backend OK
+  (go test ./...) + 152 frontend; **E2E 19/19 contra el stack real**. Se encontró
+  y corrigió un bug real del modo in-memory: `randomHex` determinista
+  (`chars[i%16]` → siempre "01234567") — todos los usuarios/direcciones
+  compartían ID y se filtraban datos entre cuentas. Fix: `newID()` con
+  contador atómico + IDs UUID v4 en el store de pedidos (misma forma que
+  postgres). Usuarios de prueba en la [Guía](./SETUP_GUIDE.md).
 
 ## Preguntas abiertas
 
