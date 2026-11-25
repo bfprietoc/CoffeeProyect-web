@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { ApiError } from "@/lib/api/client";
-import { login } from "@/lib/api/endpoints";
+import { googleLogin, login } from "@/lib/api/endpoints";
+import { GoogleLoginButton } from "@/components/auth/google-login-button";
 import { setTokens } from "@/lib/auth/session";
 import { useSession } from "@/lib/auth/use-session";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,27 @@ function LoginForm() {
     setErrorMessage("");
   }
 
+  // Login con Google: el botón oficial entrega un ID token (credential) que
+  // el backend valida contra Google. Mismo post-proceso que el login por
+  // email: tokens en sesión + merge del carrito invitado (X-Session-ID).
+  async function handleGoogleCredential(credential: string) {
+    setErrorMessage("");
+    try {
+      const res = await googleLogin(credential);
+      setTokens(res.tokens.access_token, res.tokens.refresh_token);
+      resetForm();
+      router.push(safeNext(searchParams.get("next")));
+    } catch (err) {
+      setErrorMessage(
+        err instanceof ApiError && err.code === "INVALID_GOOGLE_TOKEN"
+          ? "No se pudo validar tu cuenta de Google. Intenta de nuevo."
+          : err instanceof ApiError && err.code === "GOOGLE_AUTH_DISABLED"
+            ? "El inicio de sesión con Google no está disponible."
+            : "No se pudo iniciar sesión con Google.",
+      );
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const trimmedEmail = email.trim();
@@ -88,6 +110,17 @@ function LoginForm() {
       <p className="text-sm text-muted-foreground">
         Tu carrito de invitado se fusiona al entrar.
       </p>
+
+      {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ? (
+        <>
+          <GoogleLoginButton onCredential={handleGoogleCredential} />
+          <div className="flex items-center gap-3" aria-hidden>
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground">o</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+        </>
+      ) : null}
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="login-email">Correo electrónico</Label>
