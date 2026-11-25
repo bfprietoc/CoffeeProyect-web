@@ -3,7 +3,7 @@
 > **Estado (2026-11-24): Feature A (Google) + Feature B (Wompi) implementadas
 > en ambos repos, pendientes de merge/validación con credenciales reales.**
 > Backend: PR [CoffeeProyect#4](https://github.com/bfprietoc/CoffeeProyect/pull/4) (Google, CI verde) + PR
-> [#6](https://github.com/bfprietoc/CoffeeProyect/pull/6) (Wompi, CI re-corrigiéndose tras fix de rutas).
+> [#6](https://github.com/bfprietoc/CoffeeProyect/pull/6) (Wompi, **CI verde** — tras el fix de registro de rutas).
 > Web: PR [CoffeeProyect-web#5](https://github.com/bfprietoc/CoffeeProyect-web/pull/5) (Google, CI verde) + PR
 > [#6](https://github.com/bfprietoc/CoffeeProyect-web/pull/6) (Wompi, CI verde).
 >
