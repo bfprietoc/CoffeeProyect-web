@@ -2,7 +2,7 @@
 
 > **Estado (2026-11-25): ítems 1 y 2 completados** (release `v1.1.0`) + **v1.2.0
 > released** — login con Google (Feature A) y pagos Wompi (Feature B) mergeados
-> y en `main`/`develop` (backend #4+#6, web #5+#6). Setup real de credenciales
+> y en `main`/`develop` (backend #4+#6(#8), web #5+#6). Setup real de credenciales
 > pendiente del dueño: detalle y paso a paso en
 > [AUTH_PAYMENTS_PLAN.md](./AUTH_PAYMENTS_PLAN.md) y
 > [SETUP_GUIDE.md](./SETUP_GUIDE.md). Pendientes: las ideas de features/estilos/

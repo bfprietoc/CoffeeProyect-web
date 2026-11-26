@@ -208,8 +208,8 @@ Frontend refetchea el pedido (la API es la fuente de verdad, no el redirect)
 
 **Stack activo en local (in-memory, sin Docker — datos se pierden al reiniciar):**
 
-- Backend `coffee-api` :8080 — código de release v1.2.0 + fix de IDs únicos (`eb96110`, PR #8 pendiente). 5 cafés seedeados.
-- Frontend `coffee-web` :3001 — release v1.2.0 (`develop`/`main` @ 3be2d5d), `NEXT_PUBLIC_PAYMENTS_ENABLED=true`.
+- Backend `coffee-api` :8080 — código de release v1.2.1 (fix de IDs únicos, PR #8 mergeado). 5 cafés seedeados.
+- Frontend `coffee-web` :3001 — release v1.2.0 (`develop`/`main` @ 941cd03), `NEXT_PUBLIC_PAYMENTS_ENABLED=true`.
 - Tests E2E: **19/19 verde** contra este stack. Frontend unit: **152/152**. Backend unit: **165 tests OK**.
 
 **Usuarios de prueba** (se pierden al reiniciar el backend — in-memory):
@@ -227,8 +227,9 @@ Frontend refetchea el pedido (la API es la fuente de verdad, no el redirect)
 **Ya mergeado y en v1.2.0** (main + develop, ambos repos, tag v1.2.0):
 features A/B (PRs #4/#5/#6/#6) — de esa etapa ya no quedan PRs de feature abiertos.
 
-**Pendiente de merge:** PR #8 (backend) — `fix/in-memory-unique-ids`, fix de
-IDs únicos en modo in-memory. CI verde, sin mergear: requieren revisión.
+**Estado de merge (2026-11-25):** todo mergeado y liberado — features A/B en
+main (v1.2.0), fix in-memory (PR #8 → v1.2.1 backend). Pendiente solo:
+setup real de credenciales (fases A/B) por el dueño.
 
 ---
 

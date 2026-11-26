@@ -1,11 +1,13 @@
 # Plan: Login con Google + Pagos en línea (Wompi)
 
-> **Estado (2026-11-25): v1.2.0 released** — ambas features mergeadas y en
-> `main` + `develop` (sincronizadas), tag `v1.2.0` en ambos repos.
-> Backend `main` @ e9505af, web `main` @ 3be2d5d (v1.2.0).
+> **Estado (2026-11-25): v1.2.0 released + backend v1.2.1** — ambas features
+> mergeadas y en `main` + `develop` (sincronizadas).
+> Backend `main` @ 6a0d207 (**v1.2.1**: v1.2.0 + fix PR #8), web `main` @ 941cd03
+> (**v1.2.0** + docs). Tag v1.2.0 en ambos repos, v1.2.1 backend.
 >
 > PR #4/#6 (backend) + PR #5/#6 (web) — mergeados a develop → release
 > develop→main (rebase) → main protegida → tag + alineación de develop.
+> PR #8 (backend) — fix in-memory → release v1.2.1.
 >
 > **PUNTO ACTUAL (post-merge): setup real de credenciales por el dueño.**
 > La release es segura porque las dos features quedan apagadas por diseño
@@ -14,7 +16,7 @@
 >    → si requiere cambios, rama separada (ver abajo).
 > 2. **Wompi** — cuenta sandbox + 4 credenciales (B1–B4) → 6 pasos de validación
 >    (B5) → si requiere cambios, rama separada.
-> 3. **Release final** con deploy a wake-agent (v1.2.0).
+> 3. **Deploy a wake-agent** (v1.2.1 backend / v1.2.0 web).
 >
 > **Lo que se sigue haciendo (post-merge): setup real de credenciales.**
 > La release es segura porque las dos features quedan apagadas por diseño
@@ -22,10 +24,10 @@
 > credenciales del dueño** (Google Cloud Console + Wompi) y las validaciones
 > reales (6 pasos A + 6 pasos B).
 >
-> **Estado de las branches (2026-11-25):** `develop` = `main` = v1.2.0 (ambos
-> repos). No quedan ramas `feat/*` activas de las features — están mergeadas.
-> Pendiente: **PR #8** (backend, `fix/in-memory-unique-ids`, bug de IDs en
-> modo in-memory) — en revisión, CI verde.
+> **Estado de las branches (2026-11-25):** `develop` = `main` en ambos repos.
+> Backend en **v1.2.1** (fix #8 mergeado). Web en **v1.2.0** + docs.
+> Sin ramas `feat/*` ni `fix/*` activas — todo mergeado. La única rama
+> pendiente de merge era PR #8: **mergeado**.
 >
 > **Cada paso se marca `[x]` al completarse** y el "Registro de avances"
 > del final se actualiza con fecha + commit.
@@ -259,7 +261,7 @@ Reglas de negocio:
 - Monto: el total del pedido (subtotal + envío) en centavos COP; nunca se
   confía en el monto del cliente.
 
-### Pasos — Backend (repo `CoffeeProyect`) — PR #6, pendiente de merge
+### Pasos — Backend (repo `CoffeeProyect`) — PR #6, mergeado
 
 > **Cambio de arquitectura (2026-11-23):** la doc actual de Wompi recomienda el
 > **Web Checkout** (cero PCI scope) en vez de crear la transacción server-side
@@ -278,7 +280,7 @@ Reglas de negocio:
 - [x] Tests: 7 de firma/checksum (incl. vector oficial Wompi), 10 de servicio (ciclo completo + idempotencia + duplicados + firma inválida + eventos no-terminales), 6 de handler, guard de admin (3 sub-tests).
 - [ ] E2E (CI): con `PAYMENTS_DISABLED` el checkout sigue creando pedidos (regresión) y el botón de pago no aparece.
 
-### Pasos — Frontend (repo `CoffeeProyect-web`) — PR #6, pendiente de merge
+### Pasos — Frontend (repo `CoffeeProyect-web`) — PR #6, mergeado
 
 - [x] `NEXT_PUBLIC_PAYMENTS_ENABLED` (gate build-time; la verdad de runtime es el backend) — oculto en CI/E2E actuales (flujo intacto).
 - [x] Endpoint `createPayment(orderId)` en `src/lib/api/endpoints.ts` + `useCreatePayment` (`src/lib/query/payments.ts`).
@@ -317,25 +319,20 @@ Reglas de negocio:
 
 ### Branches
 
-**Backend (CoffeeProyect)** — `main` = `develop` = `e9505af` (tag v1.2.0)
+**Backend (CoffeeProyect)** — `main` = `develop` = `6a0d207` (tag v1.2.1)
 
 | Rama | Estado |
 |---|---|
-| `main` / `develop` | ✅ v1.2.0 (Google #4 + Wompi #6, CI quality verde) |
-| `feat/google-login` (origin) | Mergeado (PR #4) — puede borrarse |
-| `feat/wompi-payments` (origin) | Mergeado (PR #6) — puede borrarse |
+| `main` / `develop` | ✅ v1.2.1 (Google #4 + Wompi #6 + fix #8, CI quality verde) |
 | `feature/fix-error-handling` | Sin mergear — no relacionado con estas features |
 | `feature/documentation-updates` | Sin mergear — docs, no relacionado |
 | `feature/product-detail` | Sin mergear — no relacionado con estas features |
-| `fix/in-memory-unique-ids` | 🔴 **PR #8** — pendiente de merge (fix de IDs in-memory; CI verde) |
 
-**Web (CoffeeProyect-web)** — `main` = `develop` = `de7bb33` (tag v1.2.0)
+**Web (CoffeeProyect-web)** — `main` = `develop` = v1.2.0 + docs (tag v1.2.0)
 
 | Rama | Estado |
 |---|---|
-| `main` / `develop` | ✅ v1.2.0 (Google #5 + Wompi #6 + docs, CI quality+e2e verde) |
-| `feat/google-login` (origin) | Mergeado (PR #5) — puede borrarse |
-| `feat/wompi-payments` (origin) | Mergeado (PR #6) — puede borrarse |
+| `main` / `develop` | ✅ v1.2.0 + docs (Google #5 + Wompi #6, CI quality+e2e verde) |
 
 **Branches locales efímeras** (solo esta sesión, NUNCA pusheadas):
 `test/features` (combine de ambos features para el bring-up local —
@@ -372,7 +369,7 @@ embostecedor local, no usar como referencia salvo el fix de IDs).
 
 ## Cómo retomar el plan — paso a paso recomendado (2026-11-25)
 
-> Secuencia concreta para continuar desde v1.2.0. Cada paso dice qué necesita
+> Secuencia concreta para continuar desde v1.2.1 (backend) / v1.2.0 (web). Cada paso dice qué necesita
 > el dueño, qué hace el agente y cuándo se pide aprobación antes de avanzar.
 
 ### Fase A — Login con Google
@@ -383,7 +380,7 @@ embostecedor local, no usar como referencia salvo el fix de IDs).
 | A2 | Poner `GOOGLE_CLIENT_ID` en backend `.env` + `NEXT_PUBLIC_GOOGLE_CLIENT_ID` en frontend `.env.local` (+ rebuild frontend: las keys `NEXT_PUBLIC_*` se inlinan en build) | **Dueño / agente** | — |
 | A3 | Corrida de validación (6 pasos): botón aparece → login real → mismo usuario por dos vías → merge carrito invitado → registro con Google → errores 503/401 | **Dueño / agente** | — |
 | A4 | **Si la validación encuentra cambios** (p. ej. redirect URI faltante, falta un orígen, botón no aparece): rama `fix/google-<tema>` + PR → merge tras CI. NUNCA directo a develop | **Agente + dueño** | Rama separada |
-| A5 | Con A1–A4 verdes: **deploy v1.2.0** en wake-agent (`.env` de prod con las keys reales). El release a main YA está hecho — solo falta el deploy | **Dueño** | — |
+| A5 | Con A1–A4 verdes: **deploy** en wake-agent (v1.2.1/v1.2.0, `.env` de prod con las keys reales). El release a main YA está hecho — solo falta el deploy | **Dueño** | — |
 
 ### Fase B — Pagos Wompi
 
@@ -395,7 +392,7 @@ embostecedor local, no usar como referencia salvo el fix de IDs).
 | B4 | Poner `NEXT_PUBLIC_PAYMENTS_ENABLED=true` en frontend `.env.local` (dev), rebuild + restart | **Dueño / agente** | — |
 | B5 | Validación (6 pasos): botón aparece → redirect al portal Wompi con parámetros correctos → pago con tarjeta de prueba → badge «Pagado» vía webhook → duplicado → rechazado → retry → cancelado → mensaje claro | **Dueño / agente** | — |
 | B6 | **Si la validación encuentra cambios** (p. ej. webhook URL incorrecto, firma mal validada): rama `fix/wompi-<tema>` + PR tras CI | **Agente + dueño** | Rama separada |
-| B7 | Con B1–B6 verdes: activar cuenta Wompi en **producción** (`pub_live_…`) y ponérselas en el `.env` de wake-agent. Deploy v1.2.0 con credenciales de producción | **Dueño** | — |
+| B7 | Con B1–B6 verdes: activar cuenta Wompi en **producción** (`pub_live_…`) y ponérselas en el `.env` de wake-agent. Deploy con credenciales de producción | **Dueño** | — |
 
 ### Convenciones de seguridad y operación (mantiene el plan hígado)
 
@@ -445,12 +442,14 @@ embostecedor local, no usar como referencia salvo el fix de IDs).
 - 2026-11-25 — **Merge + release v1.2.0**: PRs backend #4/#6 + web #5/#6 mergeados
   a develop (squash). `develop→main` (rebase merge) → main protegida alineada →
   tag `v1.2.0` (main + develop @ e9505af backend, @ 3be2d5d web). CI verde en
-  todos los pasos (quality backend, quality+e2e web). El fix de IDs queda en
-  PR separada `fix/in-memory-unique-ids` (PR #8, pendiente de merge).
+  todos los pasos (quality backend, quality+e2e web).
+- 2026-11-25 — **Merge + release v1.2.1** (backend): PR #8 mergeado (fix de
+  IDs in-memory, squash) → release develop→main (rebase) → main protegida
+  alineada → tag `v1.2.1` (main + develop @ 6a0d207).
 - 2026-11-25 — **Docs al día** (plan + guía + README + FEATURES_PLAN): estado
   de branches (main/develop en v1.2.0), tabla de pruebas verificadas
   (165 backend + 152 web + E2E 19/19) y lo que falta (Google/Wompi reales,
-  PSE, Docker). PR #8 (fix de IDs in-memory) en revisión con CI verde.
+  PSE, Docker). PR #8 mergeado (v1.2.1).
 
 ## Preguntas abiertas
 
