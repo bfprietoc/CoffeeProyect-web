@@ -208,9 +208,9 @@ Frontend refetchea el pedido (la API es la fuente de verdad, no el redirect)
 
 **Stack activo en local (in-memory, sin Docker — datos se pierden al reiniciar):**
 
-- Backend `coffee-api` :8080 — rama `test/features` (Google + Wompi combinados) + fix de IDs únicos (`eb96110`). 5 cafés seedeados.
-- Frontend `coffee-web` :3001 — rama `test/features` (mismas dos features), `NEXT_PUBLIC_PAYMENTS_ENABLED=true`.
-- Tests E2E: **19/19 verde** contra este stack. Frontend unit: **152/152**.
+- Backend `coffee-api` :8080 — código de release v1.2.0 + fix de IDs únicos (`eb96110`, PR #8 pendiente). 5 cafés seedeados.
+- Frontend `coffee-web` :3001 — release v1.2.0 (`develop`/`main` @ 3be2d5d), `NEXT_PUBLIC_PAYMENTS_ENABLED=true`.
+- Tests E2E: **19/19 verde** contra este stack. Frontend unit: **152/152**. Backend unit: **165 tests OK**.
 
 **Usuarios de prueba** (se pierden al reiniciar el backend — in-memory):
 
@@ -219,10 +219,16 @@ Frontend refetchea el pedido (la API es la fuente de verdad, no el redirect)
 | Cliente 1 | `cliente1@coffeeproyect.test` | `Test1234!` |
 | Cliente 2 | `cliente2@coffeeproyect.test` | `Test1234!` |
 
+> Verificado en vivo 2026-11-25: ambos loginean (login real OK) e
+> aislados (cada uno ve solo sus propias direcciones).
+
 **Bloqueado por el dueño:** OAuth Client ID (fase A), cuenta Wompi + 4 credenciales (fase B), decisión de marca/dominio.
 
-**Pendiente de merge:** backend #4 + #6, web #5 + #6 — el merge va tras las
-validaciones reales de A y B (no antes: el CI verde no sustituye la prueba real).
+**Ya mergeado y en v1.2.0** (main + develop, ambos repos, tag v1.2.0):
+features A/B (PRs #4/#5/#6/#6) — de esa etapa ya no quedan PRs de feature abiertos.
+
+**Pendiente de merge:** PR #8 (backend) — `fix/in-memory-unique-ids`, fix de
+IDs únicos en modo in-memory. CI verde, sin mergear: requieren revisión.
 
 ---
 
