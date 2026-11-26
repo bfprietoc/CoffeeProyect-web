@@ -1,21 +1,24 @@
 # Plan: Login con Google + Pagos en línea (Wompi)
 
-> **Estado (2026-11-24): Feature A (Google) + Feature B (Wompi) implementadas
-> en ambos repos, pendientes de merge/validación con credenciales reales.**
-> Backend: PR [CoffeeProyect#4](https://github.com/bfprietoc/CoffeeProyect/pull/4) (Google, CI verde) + PR
-> [#6](https://github.com/bfprietoc/CoffeeProyect/pull/6) (Wompi, **CI verde** — tras el fix de registro de rutas).
-> Web: PR [CoffeeProyect-web#5](https://github.com/bfprietoc/CoffeeProyect-web/pull/5) (Google, CI verde) + PR
-> [#6](https://github.com/bfprietoc/CoffeeProyect-web/pull/6) (Wompi, CI verde).
+> **Estado (2026-11-25): v1.2.0 released** — ambas features mergeadas y en
+> `main` + `develop` (sincronizadas), tag `v1.2.0` en ambos repos.
+> Backend `main` @ e9505af, web `main` @ 3be2d5d (v1.2.0).
 >
-> **PUNTO ACTUAL:** el dueño entrega tres cosas, en paralelo:
-> 1. **OAuth Client ID** de Google (sección Solicitudes Feature A) → corrida del
->    plan de pruebas real (6 pasos) → merge backend #4 + web #5 + release.
-> 2. **Cuenta Wompi sandbox + 4 credenciales** (`WOMPI_PUBLIC_KEY`,
->    `WOMPI_INTEGRITY_SECRET`, `WOMPI_EVENT_SECRET`, `PUBLIC_BASE_URL`)
->    (sección Solicitudes Feature B) → validación manual end-to-end (sección
->    Validación) → merge backend #6 + web #6 + release.
-> 3. **Decisión de marca/dominio** (para el consent screen de Google y las
->    URLs autorizadas).
+> PR #4/#6 (backend) + PR #5/#6 (web) — mergeados a develop → release
+> develop→main (rebase) → main protegida → tag + alineación de develop.
+>
+> **PUNTO ACTUAL (post-merge): setup real de credenciales por el dueño.**
+> La release es segura porque las dos features quedan apagadas por diseño
+> hasta configurarlas (sin credenciales, 503 / botón oculto). Orden recomendado:
+> 1. **Google** — OAuth Client ID (A1–A2) → 6 pasos de validación (A3)
+>    → si requiere cambios, rama separada (ver abajo).
+> 2. **Wompi** — cuenta sandbox + 4 credenciales (B1–B4) → 6 pasos de validación
+>    (B5) → si requiere cambios, rama separada.
+> 3. **Release final** con deploy a wake-agent (v1.2.0).
+>
+> 🔴 Todo lo que sigue del plan está **post-merge**: lo que cambió es el flujo
+> del dueño (crear credenciales → configurar → validar → corregir lo que haga
+> falta → release mergeado). El plan de merges va al final del documento.
 >
 > Dos features nuevas, una por rama, siguiendo el flujo estándar:
 > rama `feat/*` desde `develop` → PR (CI verde) → merge squash a `develop`
@@ -308,6 +311,42 @@ Reglas de negocio:
 3. Al cerrar ambas: PR de release `develop` → `main`, tag, deploy en
    wake-agent (recordar: `.env` de producción necesita las keys reales).
 
+## Cómo retomar el plan — paso a paso recomendado (2026-11-25)
+
+> Secuencia concreta para continuar desde v1.2.0. Cada paso dice qué necesita
+> el dueño, qué hace el agente y cuándo se pide aprobación antes de avanzar.
+
+### Fase A — Login con Google
+
+| # | Paso | Quién | Cambio posible |
+|---|---|---|---|
+| A1 | Crear OAuth Client ID tipo **Aplicación web** en Google Cloud Console (proyecto nuevo `coffee-proyect`, consent screen Externo, orígenes: `localhost:3000/3001` + tailnet + dominio) | **Dueño** | — |
+| A2 | Poner `GOOGLE_CLIENT_ID` en backend `.env` + `NEXT_PUBLIC_GOOGLE_CLIENT_ID` en frontend `.env.local` (+ rebuild frontend: las keys `NEXT_PUBLIC_*` se inlinan en build) | **Dueño / agente** | — |
+| A3 | Corrida de validación (6 pasos): botón aparece → login real → mismo usuario por dos vías → merge carrito invitado → registro con Google → errores 503/401 | **Dueño / agente** | — |
+| A4 | **Si la validación encuentra cambios** (p. ej. redirect URI faltante, falta un orígen, botón no aparece): rama `fix/google-<tema>` + PR → merge tras CI. NUNCA directo a develop | **Agente + dueño** | Rama separada |
+| A5 | Con A1–A4 verdes: **deploy v1.2.0** en wake-agent (`.env` de prod con las keys reales). El release a main YA está hecho — solo falta el deploy | **Dueño** | — |
+
+### Fase B — Pagos Wompi
+
+| # | Paso | Quién | Cambio posible |
+|---|---|---|---|
+| B1 | Crear cuenta/panel sandbox en wompi.com (registro + cédula o NIT + cuenta bancaria) | **Dueño** | — |
+| B2 | Copiar de sandbox: `WOMPI_PUBLIC_KEY` (pub_test_…), `WOMPI_INTEGRITY_SECRET` (prod_integrity_…, server-side), `WOMPI_EVENT_SECRET` (prod_events_…) | **Dueño** | — |
+| B3 | Poner las 3 keys + `PUBLIC_BASE_URL` en backend `.env`; configurar webhook URL en el panel: `https://<host>/api/webhooks/wompi` | **Dueño / agente** | — |
+| B4 | Poner `NEXT_PUBLIC_PAYMENTS_ENABLED=true` en frontend `.env.local` (dev), rebuild + restart | **Dueño / agente** | — |
+| B5 | Validación (6 pasos): botón aparece → redirect al portal Wompi con parámetros correctos → pago con tarjeta de prueba → badge «Pagado» vía webhook → duplicado → rechazado → retry → cancelado → mensaje claro | **Dueño / agente** | — |
+| B6 | **Si la validación encuentra cambios** (p. ej. webhook URL incorrecto, firma mal validada): rama `fix/wompi-<tema>` + PR tras CI | **Agente + dueño** | Rama separada |
+| B7 | Con B1–B6 verdes: activar cuenta Wompi en **producción** (`pub_live_…`) y ponérselas en el `.env` de wake-agent. Deploy v1.2.0 con credenciales de producción | **Dueño** | — |
+
+### Convenciones de seguridad y operación (mantiene el plan hígado)
+
+- Las dos features **quedan apagadas por diseño** sin credenciales: Google → 503/botón oculto; Wompi → 503 en pago/webhook + botón visible solo si `NEXT_PUBLIC_PAYMENTS_ENABLED=true` (un 503 visible del backend es lo correcto).
+- Los secretos de Wompi NUNCA van al frontend (sin `NEXT_PUBLIC_`). El front solo ve la public key vía la respuesta del backend.
+- Cambios de configuración (env var, URLs autorizadas, webhook URL) **no** son cambios de código: no requieren rama ni PR; solo cambios de comportamiento.
+- Si aparece un bug real (como el de IDs, ver PR #8), va en su propia rama + PR — **nunca directo a develop**.
+
+---
+
 ## Registro de avances
 
 > Formato: `fecha — feature — qué pasó (commit/PR)`.
@@ -344,6 +383,11 @@ Reglas de negocio:
   compartían ID y se filtraban datos entre cuentas. Fix: `newID()` con
   contador atómico + IDs UUID v4 en el store de pedidos (misma forma que
   postgres). Usuarios de prueba en la [Guía](./SETUP_GUIDE.md).
+- 2026-11-25 — **Merge + release v1.2.0**: PRs backend #4/#6 + web #5/#6 mergeados
+  a develop (squash). `develop→main` (rebase merge) → main protegida alineada →
+  tag `v1.2.0` (main + develop @ e9505af backend, @ 3be2d5d web). CI verde en
+  todos los pasos (quality backend, quality+e2e web). El fix de IDs queda en
+  PR separada `fix/in-memory-unique-ids` (PR #8, pendiente de merge).
 
 ## Preguntas abiertas
 
