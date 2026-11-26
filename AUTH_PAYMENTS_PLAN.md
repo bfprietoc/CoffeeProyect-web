@@ -332,6 +332,11 @@ Reglas de negocio:
 
 **Web (CoffeeProyect-web)** — `main` = `develop` = v1.2.0 + docs (tag v1.2.0)
 
+> **Fase B (Wompi) NO requiere branch nueva** — lo que falta es credenciales
+> y config (entorno local + panel Wompi), no cambios de código. Si la validación
+> de Fase B encuentra un bug real, los fixes van en `fix/wompi-<tema>` como
+> cualquier bug.
+
 | Rama | Estado |
 |---|---|
 | `main` / `develop` | ✅ v1.2.0 + docs (Google #5 + Wompi #6, CI quality+e2e verde) |
