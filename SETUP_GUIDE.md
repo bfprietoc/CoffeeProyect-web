@@ -22,9 +22,9 @@
 
 | # | Tarea | Quién | Dónde |
 |---|---|---|---|
-| A1 | Crear OAuth Client ID (tipo Web) en Google Cloud Console | **Dueño** | Google Cloud Console |
-| A2 | Poner `GOOGLE_CLIENT_ID` y `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | **Dueño** | backend `.env` + frontend `.env.local` |
-| A3 | Corrida del plan de pruebas (6 pasos) | **Dueño o agente** | backend + frontend |
+| A1 | ✅ OAuth Client ID (tipo Web) — creado y verificado | **Hecho** (2026-11-26) | Google Cloud Console |
+| A2 | ✅ `GOOGLE_CLIENT_ID` + `NEXT_PUBLIC_GOOGLE_CLIENT_ID` configurados | **Hecho** | backend `.env` + frontend `.env.local` |
+| A3 | ✅ Login real verificado en vivo | **Hecho** (2026-11-26) | backend + frontend |
 | A4 | ✅ Merge PRs backend #4 + web #5 + release | **Hecho** (v1.2.0/v1.2.1) | GitHub |
 | B1 | Crear cuenta Wompi (self-service, gratis) y entrar al panel sandbox | **Dueño** | wompi.com |
 | B2 | Copiar las 3 credenciales de sandbox + webhook URL | **Dueño** | Panel Wompi |
@@ -41,11 +41,11 @@
 
 **Qué es:** botón "Continuar con Google" en `/login` y `/register`. El
 backend valida el ID token contra el JWKS de Google (sin client secret) y
-crea/reutiliza el usuario. **Mergeado y en v1.2.0** (PRs backend #4 + web #5,
-releases v1.2.0/v1.2.1) — la fase ahora es el **setup real de credenciales
-con el dueño**.
+crea/reutiliza el usuario. **Mergeado y validado EN VIVO (2026-11-26)** —
+proyecto + Client ID + login real verificado (`POST /auth/google 200`).
+Fase A CERRADA (A1–A3); queda solo A5 (deploy).
 
-### A1. Crear el OAuth Client ID (solo dueño)
+### A1. Crear el OAuth Client ID ✅ **HECHO (2026-11-26)**
 
 1. [console.cloud.google.com](https://console.cloud.google.com) → **Crear proyecto** (p. ej. `coffee-proyect`).
 2. **APIs y servicios** → **Elegir pantalla de consentimiento** → tipo **Externo** → nombre = **el de la marca** (es lo que ve el cliente en el popup de Google). No hace falta habilitar ninguna API.
@@ -208,32 +208,26 @@ Frontend refetchea el pedido (la API es la fuente de verdad, no el redirect)
 
 ---
 
-## 🧪 Estado actual del entorno de pruebas (2026-11-25)
+## 🧪 Estado actual del entorno de pruebas (2026-11-26)
 
 **Stack activo en local (in-memory, sin Docker — datos se pierden al reiniciar):**
 
-- Backend `coffee-api` :8080 — código de release v1.2.1 (fix de IDs únicos, PR #8 mergeado). 5 cafés seedeados.
-- Frontend `coffee-web` :3001 — release v1.2.0 (`develop`/`main` @ 941cd03), `NEXT_PUBLIC_PAYMENTS_ENABLED=true`.
-- Tests E2E: **19/19 verde** contra este stack. Frontend unit: **152/152**. Backend unit: **165 tests OK**.
+- Backend `coffee-api` :8080 — código de release v1.2.1 (fix de IDs únicos, PR #8 mergeado). 5 cafés seedeados. `GOOGLE_CLIENT_ID` configurado.
+- Frontend `coffee-web` :3001 — release v1.2.0 (`develop`/`main` @ 4434a9c), `NEXT_PUBLIC_GOOGLE_CLIENT_ID` + `NEXT_PUBLIC_PAYMENTS_ENABLED=true`. 5 cafés seedeados.
+- Tests E2E: **19/19 verde** (era 2026-11-25). Frontend unit: **152/152**. Backend unit: **165 tests OK**.
 
-**Usuarios de prueba** (se pierden al reiniciar el backend — in-memory):
+**Fase A (Google) ✅ VALIDADA EN VIVO (2026-11-26):**
+- Proyecto + OAuth Client ID (Web tipo) creados por el dueño, orígenes localhost:3000/3001 + tailnet.
+- Credenciales en los dos `.env` (gitignored): `GOOGLE_CLIENT_ID` backend / `NEXT_PUBLIC_GOOGLE_CLIENT_ID` frontend.
+- Login real confirmado: `POST /auth/google 200` → `GET /users/me 200` + `POST /auth/refresh 200` (logs).
+- **Cuenta del owner: creada a mano vía email+contraseña**, reconciliada con Google (mismo email → mismo `user.id`).
+- Restart de `coffee-api` (2026-11-26) limpió todo (clientes de prueba + datos) — cualquier cuenta de prueba se recrea en 30s.
 
-| Usuario | Email | Contraseña |
-|---|---|---|
-| Cliente 1 | `cliente1@coffeeproyect.test` | `Test1234!` |
-| Cliente 2 | `cliente2@coffeeproyect.test` | `Test1234!` |
+**Fase B (Wompi) pendiente:** cuenta sandbox + 3 credenciales (`WOMPI_PUBLIC_KEY`, `WOMPI_INTEGRITY_SECRET`, `WOMPI_EVENT_SECRET`) + `PUBLIC_BASE_URL` del dueño — paso B1 en adelante.
 
-> Verificado en vivo 2026-11-25: ambos loginean (login real OK) e
-> aislados (cada uno ve solo sus propias direcciones).
+**Bloqueado por el dueño:** cuenta Wompi (fase B), decisión de marca/dominio (fase C).
 
-**Bloqueado por el dueño:** OAuth Client ID (fase A), cuenta Wompi + 4 credenciales (fase B), decisión de marca/dominio.
-
-**Ya mergeado y en v1.2.0** (main + develop, ambos repos, tag v1.2.0):
-features A/B (PRs #4/#5/#6/#6) — de esa etapa ya no quedan PRs de feature abiertos.
-
-**Estado de merge (2026-11-25):** todo mergeado y liberado — features A/B en
-main (v1.2.0), fix in-memory (PR #8 → v1.2.1 backend). Pendiente solo:
-setup real de credenciales (fases A/B) por el dueño.
+**Estado de merge:** features A/B + fix in-memory en main (v1.2.1 backend / v1.2.0 web + docs). Sin PRs abiertos.
 
 ---
 
