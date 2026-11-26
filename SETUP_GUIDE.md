@@ -5,8 +5,9 @@
 > Wompi (Feature B) — más qué debe hacer cada quien y cómo verificar.
 >
 > **Estado (2026-11-25):** ambas features están **implementadas, testeadas
-> (unit + E2E) y en PRs abiertos** — falta la creación de credenciales por el
-> dueño y la validación final. La guía está organizada en 2 fases:
+> (unit + E2E) y mergeadas** (v1.2.0 + v1.2.1). Falta la creación de
+> credenciales por el dueño, la validación final con esas credenciales y el
+> deploy. La guía está organizada en 2 fases:
 >
 > 1. **Fase A** — Login con Google (solo dueño)
 > 2. **Fase B** — Pagos Wompi (solo dueño)
@@ -24,14 +25,15 @@
 | A1 | Crear OAuth Client ID (tipo Web) en Google Cloud Console | **Dueño** | Google Cloud Console |
 | A2 | Poner `GOOGLE_CLIENT_ID` y `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | **Dueño** | backend `.env` + frontend `.env.local` |
 | A3 | Corrida del plan de pruebas (6 pasos) | **Dueño o agente** | backend + frontend |
-| A4 | Merge PRs backend #4 + web #5 (+release) | **Dueño** | GitHub |
+| A4 | ✅ Merge PRs backend #4 + web #5 + release | **Hecho** (v1.2.0/v1.2.1) | GitHub |
 | B1 | Crear cuenta Wompi (self-service, gratis) y entrar al panel sandbox | **Dueño** | wompi.com |
 | B2 | Copiar las 3 credenciales de sandbox + webhook URL | **Dueño** | Panel Wompi |
 | B3 | Poner `WOMPI_*` + `PUBLIC_BASE_URL` en el backend `.env` | **Dueño** | backend `.env` |
 | B4 | Poner `NEXT_PUBLIC_PAYMENTS_ENABLED=true` en el frontend | **Dueño** | frontend `.env.local` / prod |
 | B5 | Validar con tarjeta de prueba (6 pasos) | **Dueño o agente** | end-to-end |
-| B6 | Merge PRs backend #6 + web #6 (+release) | **Dueño** | GitHub |
+| B6 | ✅ Merge PRs backend #6 + web #6 + release | **Hecho** (v1.2.0) | GitHub |
 | C | Decisión marca/dominio (consent screen + URLs autorizadas) | **Dueño** | Google Cloud Console + Caddy |
+| D | Deploy a wake-agent con `.env` de producción (tras validación) | **Dueño o agente** | wake-agent |
 
 ---
 
@@ -39,8 +41,9 @@
 
 **Qué es:** botón "Continuar con Google" en `/login` y `/register`. El
 backend valida el ID token contra el JWKS de Google (sin client secret) y
-crea/reutiliza el usuario. **PRs backend #4 + web #5** (CI verde, pendientes
-de merge).
+crea/reutiliza el usuario. **Mergeado y en v1.2.0** (PRs backend #4 + web #5,
+releases v1.2.0/v1.2.1) — la fase ahora es el **setup real de credenciales
+con el dueño**.
 
 ### A1. Crear el OAuth Client ID (solo dueño)
 
@@ -88,10 +91,10 @@ Reinicia el build: `npm run build` + `systemctl --user restart coffee-web`
 5. **Registro con Google** (desde `/register`): cuenta nueva → se crea sin password; después entra también por Google (no por contraseña).
 6. **Errores**: con `GOOGLE_CLIENT_ID` ausente en el backend → 503 y el botón desaparece; token manipulado → 401.
 
-### A4. Merge + release
+### A4. ✅ Merge + release (hecha)
 
-Con la validación verde: merge **backend #4** + **web #5** → release
-`develop → main` con tag → deploy.
+Mergeados en v1.2.0/v1.2.1 (backend #4 + web #5 → develop → release
+develop→main → tag). Lo que falta es el **deploy** real (A5).
 
 ---
 
@@ -100,7 +103,8 @@ Con la validación verde: merge **backend #4** + **web #5** → release
 **Qué es:** cobrar el pedido en línea con el **Web Checkout** de Wompi (cero
 PCI scope en nuestra app): el backend valida y firma los parámetros, el
 cliente paga en el portal de Wompi, y el backend sabe el resultado vía
-**webhook firmado**. **PRs backend #6 + web #6** (CI verde, pendientes de merge).
+**webhook firmado**. **PRs backend #6 + web #6 mergeados en v1.2.0** — la
+fase ahora es el setup real de credenciales con el dueño.
 El método **PSE** (dominante en Colombia) está incluido en el flujo — el
 banco del cliente autentica con Llave Virtual/Móvil.
 
@@ -163,10 +167,10 @@ Reinicia: `npm run build` + `systemctl --user restart coffee-web`
 
 > ⚠️ **PSE en sandbox:** Wompi no garantiza PSE estable en pruebas. Si no se prueba en sandbox, valida PSE con una **compra real de bajo valor** al activar producción. PSE vía Web Checkout sale automáticamente (los bancos aparecen en el portal).
 
-### B6. Merge + release
+### B6. ✅ Merge + release (hecha)
 
-Con la validación verde: merge **backend #6** + **web #6** → release
-`develop → main` con tag → deploy wake-agent con `.env` de producción.
+Mergeados en v1.2.0 (backend #6 + web #6 → develop → rebase → main →
+tag). Lo que falta es el **deploy** real (A5/B7).
 
 ---
 
