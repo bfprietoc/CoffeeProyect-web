@@ -16,14 +16,16 @@
 >    (B5) → si requiere cambios, rama separada.
 > 3. **Release final** con deploy a wake-agent (v1.2.0).
 >
-> 🔴 Todo lo que sigue del plan está **post-merge**: lo que cambió es el flujo
-> del dueño (crear credenciales → configurar → validar → corregir lo que haga
-> falta → release mergeado). El plan de merges va al final del documento.
+> **Lo que se sigue haciendo (post-merge): setup real de credenciales.**
+> La release es segura porque las dos features quedan apagadas por diseño
+> (sin credenciales: 503 / botón oculto). 🔴 Lo que falta son **las
+> credenciales del dueño** (Google Cloud Console + Wompi) y las validaciones
+> reales (6 pasos A + 6 pasos B).
 >
-> Dos features nuevas, una por rama, siguiendo el flujo estándar:
-> rama `feat/*` desde `develop` → PR (CI verde) → merge squash a `develop`
-> → al cerrar ambas, PR de release `develop` → `main` + tag.
-> `main` protegida en ambos repos (ruleset "proteger-main").
+> **Estado de las branches (2026-11-25):** `develop` = `main` = v1.2.0 (ambos
+> repos). No quedan ramas `feat/*` activas de las features — están mergeadas.
+> Pendiente: **PR #8** (backend, `fix/in-memory-unique-ids`, bug de IDs en
+> modo in-memory) — en revisión, CI verde.
 >
 > **Cada paso se marca `[x]` al completarse** y el "Registro de avances"
 > del final se actualiza con fecha + commit.
@@ -311,6 +313,63 @@ Reglas de negocio:
 3. Al cerrar ambas: PR de release `develop` → `main`, tag, deploy en
    wake-agent (recordar: `.env` de producción necesita las keys reales).
 
+## Estado de las branches y pruebas (2026-11-25)
+
+### Branches
+
+**Backend (CoffeeProyect)** — `main` = `develop` = `e9505af` (tag v1.2.0)
+
+| Rama | Estado |
+|---|---|
+| `main` / `develop` | ✅ v1.2.0 (Google #4 + Wompi #6, CI quality verde) |
+| `feat/google-login` (origin) | Mergeado (PR #4) — puede borrarse |
+| `feat/wompi-payments` (origin) | Mergeado (PR #6) — puede borrarse |
+| `feature/fix-error-handling` | Sin mergear — no relacionado con estas features |
+| `feature/documentation-updates` | Sin mergear — docs, no relacionado |
+| `feature/product-detail` | Sin mergear — no relacionado con estas features |
+| `fix/in-memory-unique-ids` | 🔴 **PR #8** — pendiente de merge (fix de IDs in-memory; CI verde) |
+
+**Web (CoffeeProyect-web)** — `main` = `develop` = `de7bb33` (tag v1.2.0)
+
+| Rama | Estado |
+|---|---|
+| `main` / `develop` | ✅ v1.2.0 (Google #5 + Wompi #6 + docs, CI quality+e2e verde) |
+| `feat/google-login` (origin) | Mergeado (PR #5) — puede borrarse |
+| `feat/wompi-payments` (origin) | Mergeado (PR #6) — puede borrarse |
+
+**Branches locales efímeras** (solo esta sesión, NUNCA pusheadas):
+`test/features` (combine de ambos features para el bring-up local —
+embostecedor local, no usar como referencia salvo el fix de IDs).
+
+### Pruebas (verificado en vivo, 2026-11-25)
+
+| Nivel | Resultado |
+|---|---|
+| Backend unit (`go test ./...`) | ✅ 165 tests OK |
+| Web unit (Vitest) | ✅ 152 tests OK (38 archivos) |
+| Web E2E (Playwright, stack real in-memory) | ✅ **19/19** |
+| CI backend (quality) | ✅ en todos los merges y releases |
+| CI web (quality + e2e) | ✅ en todos los merges y releases |
+| Backend autorización de rutas | ✅ routes_test.go (rutas de pago existen vía `routes.Register`) |
+| Bring-up local | ✅ backend :8080 + frontend :3001 (in-memory, datos se pierden al reiniciar) |
+
+### Qué NO está verificado (limitaciones honestas)
+
+- 🔴 **Login Google real** — no hay OAuth Client ID (dueño). Test verificada
+  en CI solo en modo oculto (botón ausente). El plan A3 queda pendiente.
+- 🔴 **Pago real con Wompi** — no hay cuenta sandbox (dueño). Lo verificado
+  hasta ahora es el 503 PAYMENTS_DISABLED + el flujo completo hasta el
+  botón (botón visible con flag ON, `/orders/{id}` renderizado).
+- 🔴 **PSE** — no disponible de forma fiable en sandbox; validar con compra
+  real de bajo valor al pasar a producción.
+- ⚠️ **Docker/postgres** — el stack usa in-memory porque el daemon de
+  Docker no está disponible en esta máquina (requiere root). Los datos
+  (usuarios, pedidos, direcciones) se pierden al reiniciar el backend.
+  Para el E2E contra postgres real hace falta `sudo systemctl start docker`
+  + `docker compose up -d` (dueño).
+
+---
+
 ## Cómo retomar el plan — paso a paso recomendado (2026-11-25)
 
 > Secuencia concreta para continuar desde v1.2.0. Cada paso dice qué necesita
@@ -388,6 +447,10 @@ Reglas de negocio:
   tag `v1.2.0` (main + develop @ e9505af backend, @ 3be2d5d web). CI verde en
   todos los pasos (quality backend, quality+e2e web). El fix de IDs queda en
   PR separada `fix/in-memory-unique-ids` (PR #8, pendiente de merge).
+- 2026-11-25 — **Docs al día** (plan + guía + README + FEATURES_PLAN): estado
+  de branches (main/develop en v1.2.0), tabla de pruebas verificadas
+  (165 backend + 152 web + E2E 19/19) y lo que falta (Google/Wompi reales,
+  PSE, Docker). PR #8 (fix de IDs in-memory) en revisión con CI verde.
 
 ## Preguntas abiertas
 

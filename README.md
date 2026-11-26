@@ -4,18 +4,16 @@ Frontend de [CoffeeProyect](https://github.com/bfprietoc/CoffeeProyect) — tien
 
 ## Estado
 
-En desarrollo activo (release `v1.1.0` en `main`; `develop` con dos features
-en PRs pendientes de validación con credenciales reales — ver
-[AUTH_PAYMENTS_PLAN.md](./AUTH_PAYMENTS_PLAN.md)).
+**Release `v1.2.0` en `main`** (2026-11-25): `develop` = `main` en ambos
+repos, `develop` alineada tras release. Las dos features nuevas de la
+columna están mergeadas: **login con Google** (backend #4 + web #5) y **pagos
+en línea con Wompi** (PSE + tarjetas) (backend #6 + web #6).
 
-**En curso (en PRs abiertos, merge pendientes):**
-
-- **Login con Google** — Feature A: botón Google en `/login` y `/register`
-  (backend PR [CoffeeProyect#4](https://github.com/bfprietoc/CoffeeProyect/pull/4)
-  + web PR [#5](https://github.com/bfprietoc/CoffeeProyect-web/pull/5)).
-- **Pagos en línea con Wompi** (tarjetas + PSE) — Feature B: Web Checkout
-  Wompi (backend PR [CoffeeProyect#6](https://github.com/bfprietoc/CoffeeProyect/pull/6)
-  + web PR [#6](https://github.com/bfprietoc/CoffeeProyect-web/pull/6)).
+**Pendiente del dueño:** activar ambos features con credenciales reales —
+está en [SETUP_GUIDE.md](./SETUP_GUIDE.md) (checklist A1/A3/A4/A5 y B1–B7 +
+usuarios de prueba + estado de branches). Las features quedan apagadas por
+diseño hasta que se completen (Google: 503/botón oculto; Wompi: 503 + botón
+visible que responde 503).
 
 **¿Querés activar login con Google y pagos Wompi?** →
 [SETUP_GUIDE.md](./SETUP_GUIDE.md) (guía operativa unificada: checklist de

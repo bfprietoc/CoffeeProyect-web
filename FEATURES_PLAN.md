@@ -1,12 +1,12 @@
 # Plan de funcionalidades — Ronda 1 (2026-11-20)
 
-> **Estado (2026-11-24): ítems 1 y 2 completados** (release `v1.1.0`).
-> **Dos features nuevas en PRs abiertos** (pendientes de merge + validación
-> con credenciales reales): login con Google (Feature A, backend #4 + web #5)
-> y pagos en línea con Wompi (Feature B, backend #6 + web #6) — detalle y
-> plan de pruebas en [AUTH_PAYMENTS_PLAN.md](./AUTH_PAYMENTS_PLAN.md).
-> Pendientes: las ideas de features/estilos/imágenes por llegar (sección
-> "Pendientes").
+> **Estado (2026-11-25): ítems 1 y 2 completados** (release `v1.1.0`) + **v1.2.0
+> released** — login con Google (Feature A) y pagos Wompi (Feature B) mergeados
+> y en `main`/`develop` (backend #4+#6, web #5+#6). Setup real de credenciales
+> pendiente del dueño: detalle y paso a paso en
+> [AUTH_PAYMENTS_PLAN.md](./AUTH_PAYMENTS_PLAN.md) y
+> [SETUP_GUIDE.md](./SETUP_GUIDE.md). Pendientes: las ideas de features/estilos/
+> imágenes por llegar (sección "Pendientes").
 >
 > Ronda de mejoras funcionales detectadas en la app desplegada (wake-agent,
 > release `v1.0.0`). Cada ítem: **estado verificado → cambio → validación**
