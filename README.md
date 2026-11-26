@@ -4,8 +4,8 @@ Frontend de [CoffeeProyect](https://github.com/bfprietoc/CoffeeProyect) — tien
 
 ## Estado
 
-**Release `v1.2.0` en `main`** (2026-11-25): `develop` = `main` en ambos
-repos, `develop` alineada tras release. Las dos features nuevas de la
+**Release `v1.2.0` en `main`** (2026-11-25) — con `v1.2.1` en backend —
+`develop` = `main` en ambos repos, `develop` alineada tras release. Las dos features nuevas de la
 columna están mergeadas: **login con Google** (backend #4 + web #5) y **pagos
 en línea con Wompi** (PSE + tarjetas) (backend #6 + web #6).
 
