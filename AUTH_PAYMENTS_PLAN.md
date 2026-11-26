@@ -1,7 +1,10 @@
 # Plan: Login con Google + Pagos en línea (Wompi)
 
-> **Estado (2026-11-25): v1.2.0 released + backend v1.2.1** — ambas features
-> mergeadas y en `main` + `develop` (sincronizadas).
+> **Estado (2026-11-26): v1.2.0 released + backend v1.2.1 — Google login
+> VALIDADO EN VIVO** (login real con cuenta de owner, `POST /auth/google 200`
+> + `GET /users/me 200` en logs). Fase A lista para producción; Fase B (Wompi)
+> pendiente de cuenta sandbox del dueño.
+> Ambas features mergeadas y en `main` + `develop` (sincronizadas).
 > Backend `main` @ 6a0d207 (**v1.2.1**: v1.2.0 + fix PR #8), web `main` @ 941cd03
 > (**v1.2.0** + docs). Tag v1.2.0 en ambos repos, v1.2.1 backend.
 >
@@ -9,19 +12,15 @@
 > develop→main (rebase) → main protegida → tag + alineación de develop.
 > PR #8 (backend) — fix in-memory → release v1.2.1.
 >
-> **PUNTO ACTUAL (post-merge): setup real de credenciales por el dueño.**
-> La release es segura porque las dos features quedan apagadas por diseño
-> hasta configurarlas (sin credenciales, 503 / botón oculto). Orden recomendado:
-> 1. **Google** — OAuth Client ID (A1–A2) → 6 pasos de validación (A3)
->    → si requiere cambios, rama separada (ver abajo).
-> 2. **Wompi** — cuenta sandbox + 4 credenciales (B1–B4) → 6 pasos de validación
->    (B5) → si requiere cambios, rama separada.
+> **PUNTO ACTUAL (2026-11-26): Fase A de Google VALIDADA EN VIVO.**
+> Fase B (Wompi) pendiente — cuenta sandbox + credenciales del dueño. Orden:
+> 1. ✅ **Google** — OAuth Client ID creado y seteado (A1–A3) — **validado en vivo**.
+> 2. **Wompi** — cuenta sandbox + 3 credenciales + `PUBLIC_BASE_URL` (B1–B4) → validación B5.
 > 3. **Deploy a wake-agent** (v1.2.1 backend / v1.2.0 web).
 >
 > **Lo que se sigue haciendo (post-merge): setup real de credenciales.**
-> La release es segura porque las dos features quedan apagadas por diseño
-> (sin credenciales: 503 / botón oculto). 🔴 Lo que falta son **las
-> credenciales del dueño** (Google Cloud Console + Wompi) y las validaciones
+> La release es segura porque la Feature B queda apagada por diseño hasta
+> configurarla. 🔴 Lo que falta es la **cuenta Wompi + 3 credenciales del dueño**
 > reales (6 pasos A + 6 pasos B).
 >
 > **Estado de las branches (2026-11-25):** `develop` = `main` en ambos repos.
@@ -102,7 +101,7 @@ flujo actual de tokens).
 
 ### Solicitudes (solo el dueño puede hacerlas)
 
-- [ ] **Crear OAuth Client ID en Google Cloud Console** (gratis, ~5 min) — **PUNTO ACTUAL**: todo lo demás de la Feature A está implementado y testeado; esto es lo único que falta para la validación real.
+- [x] **Crear OAuth Client ID en Google Cloud Console** — **HECHO** (usuario validó el login en vivo)
   - **No se necesita una cuenta de Google nueva**: con el Gmail personal basta. Lo nuevo es un *proyecto* en Google Cloud (contenedor lógico, gratis) y la credencial OAuth dentro de él.
   1. [console.cloud.google.com](https://console.cloud.google.com) → **crear proyecto** (p. ej. `coffee-proyect`).
   2. "APIs y servicios" → "IDs de OAuth" → configurar pantalla de consentimiento (tipo **Externo**, nombre = el de la cafetería — es lo que verá el cliente en el popup; ver pregunta abierta sobre la marca). No hace falta habilitar APIs.
@@ -137,7 +136,10 @@ flujo actual de tokens).
 ### Validación (E2E / manual)
 
 - [x] E2E en CI: sin `GOOGLE_CLIENT_ID` el botón no existe; login/register por email intactos (PR web #5, job e2e verde).
-- [ ] **E2E real con la key** — pendiente del OAuth Client ID (solicitud de arriba). Con el Client ID en mano, el plan de pruebas:
+- [x] **E2E real con la key** — VALIDADO EN VIVO (2026-11-26): proyecto +
+  Client ID creado, `GOOGLE_CLIENT_ID` + `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
+  configurados (gitignored), botón visible, login real confirmado en logs
+  (`POST /auth/google 200` → `GET /users/me 200`). Plan de pruebas:
   1. Backend (rama `feat/google-login` local) arranca con `GOOGLE_CLIENT_ID=…` en el `.env` de dev; web con `NEXT_PUBLIC_GOOGLE_CLIENT_ID=…` → el botón aparece en /login y /register.
   2. **Login Google → sesión**: entrar con la cuenta de prueba → redirect a `/` autenticado ("Hola, <nombre>").
   3. **Mismo usuario por dos vías**: cerrar sesión → entrar con email+password de una cuenta existente cuyo email sea el de Google → mismo `user.id` (verificar en `/account` y en la DB).
@@ -367,6 +369,35 @@ embostecedor local, no usar como referencia salvo el fix de IDs).
 
 ---
 
+## Cómo tratamos las credenciales (convención, 2026-11-26)
+
+### En código y PRs — solo code, nunca credenciales
+
+- **PRs y ramas**: llevan código y documentación. Ninguna rama contiene valores
+  reales (`.env` / `.env.local` son gitignored y **nunca** entran a un PR).
+- **`.env.example` / `.env.local.example`**: solo placeholders de documentación
+  (`xxx.apps.googleusercontent.com`, `pub_test_xxx`…). Nada real.
+- **`client_secret.json`** (de Google): **no se usa** (nuestro flujo verifica el
+  ID token contra JWKS sin secret). Permanece localmente con el dueño; nunca se
+  commitea, no se comparte, no entra a la raíz del repo. No debe servirse en
+  ningun lado — Google lo rotación a la mano si se filtra.
+
+### Dónde viven las credenciales (local)
+
+| Archivo (gitignored) | Variables | Exposición |
+|---|---|---|
+| Backend `.env` | `GOOGLE_CLIENT_ID`, `WOMPI_*` (secrets), `PUBLIC_BASE_URL` | server-only |
+| Frontend `.env.local` | `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, `NEXT_PUBLIC_PAYMENTS_ENABLED`, `NEXT_PUBLIC_API_URL` | **pública por naturaleza** (va al bundle del front) |
+| Prod `.env` en wake-agent | mismas que backend | server-only |
+
+### Regla de oro
+
+> Las credenciales se configuran **en el entorno** (`.env`), no en el código ni
+> en PRs. No hay commits de configuración; si algo falla por config, se pide el
+> valor y se corrige en el entorno — nunca se copia al repo ni se commitea.
+
+---
+
 ## Cómo retomar el plan — paso a paso recomendado (2026-11-25)
 
 > Secuencia concreta para continuar desde v1.2.1 (backend) / v1.2.0 (web). Cada paso dice qué necesita
@@ -376,9 +407,9 @@ embostecedor local, no usar como referencia salvo el fix de IDs).
 
 | # | Paso | Quién | Cambio posible |
 |---|---|---|---|
-| A1 | Crear OAuth Client ID tipo **Aplicación web** en Google Cloud Console (proyecto nuevo `coffee-proyect`, consent screen Externo, orígenes: `localhost:3000/3001` + tailnet + dominio) | **Dueño** | — |
-| A2 | Poner `GOOGLE_CLIENT_ID` en backend `.env` + `NEXT_PUBLIC_GOOGLE_CLIENT_ID` en frontend `.env.local` (+ rebuild frontend: las keys `NEXT_PUBLIC_*` se inlinan en build) | **Dueño / agente** | — |
-| A3 | Corrida de validación (6 pasos): botón aparece → login real → mismo usuario por dos vías → merge carrito invitado → registro con Google → errores 503/401 | **Dueño / agente** | — |
+| A1 | ✅ OAuth Client ID tipo **Aplicación web** (proyecto `coffee-proyect`, orígenes localhost + tailnet) | **Dueño** | — |
+| A2 | ✅ `GOOGLE_CLIENT_ID` backend + `NEXT_PUBLIC_GOOGLE_CLIENT_ID` frontend (rebuild hecho; button visible) | **Dueño / agente** | — |
+| A3 | ✅ Boton aparece → login real → misma cuenta por email+contraseña y por Google (verificado en logs) | **Dueño / agente** | — |
 | A4 | **Si la validación encuentra cambios** (p. ej. redirect URI faltante, falta un orígen, botón no aparece): rama `fix/google-<tema>` + PR → merge tras CI. NUNCA directo a develop | **Agente + dueño** | Rama separada |
 | A5 | Con A1–A4 verdes: **deploy** en wake-agent (v1.2.1/v1.2.0, `.env` de prod con las keys reales). El release a main YA está hecho — solo falta el deploy | **Dueño** | — |
 
@@ -450,6 +481,14 @@ embostecedor local, no usar como referencia salvo el fix de IDs).
   de branches (main/develop en v1.2.0), tabla de pruebas verificadas
   (165 backend + 152 web + E2E 19/19) y lo que falta (Google/Wompi reales,
   PSE, Docker). PR #8 mergeado (v1.2.1).
+- 2026-11-26 — **Fase A de Google validada EN VIVO (A1–A3)**: proyecto en
+  Google Cloud (OAuth Client ID "Aplicación web", orígenes
+  localhost:3000/3001 + tailnet). `GOOGLE_CLIENT_ID` +
+  `NEXT_PUBLIC_GOOGLE_CLIENT_ID` configurados en los dos `.env` (gitignored).
+  Login real confirmado en logs (`POST /auth/google 200` + `GET /users/me 200`).
+  Cuenta del owner: creada a mano vía email+contraseña, reconciliada con
+  Google (mismo email → mismo `user.id`). Test users de in-memory eliminados
+  (restart); recrear cuando se necesite E2E.
 
 ## Preguntas abiertas
 
