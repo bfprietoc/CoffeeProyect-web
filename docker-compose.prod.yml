@@ -26,6 +26,9 @@ services:
         # Login con Google (se hornea en el build; frontend + backend deben
         # tener el mismo valor). Sin valor → el botón no se renderiza.
         NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}
+        # Pagos Wompi: botón de pago visible en el front (se hornea en el
+        # build). Sin valor → 503 PAYMENTS_DISABLED en el backend.
+        NEXT_PUBLIC_PAYMENTS_ENABLED: ${NEXT_PUBLIC_PAYMENTS_ENABLED:-}
     image: coffeeproyect-web
     restart: unless-stopped
     environment:
@@ -52,6 +55,13 @@ services:
       # Login con Google: el backend valida el ID token del navegador contra
       # Google (JWKS). Sin valor → login con Google desactivado.
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      # Pagos Wompi (sandbox/prod). Sin valor → payments disabled (503).
+      WOMPI_PUBLIC_KEY: ${WOMPI_PUBLIC_KEY:-}
+      WOMPI_INTEGRITY_SECRET: ${WOMPI_INTEGRITY_SECRET:-}
+      WOMPI_EVENT_SECRET: ${WOMPI_EVENT_SECRET:-}
+      # URL pública para el redirect del checkout (opcional; si falta,
+      # Wompi muestra su propia página de éxito).
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
     expose:
       - "8080"
     depends_on:
