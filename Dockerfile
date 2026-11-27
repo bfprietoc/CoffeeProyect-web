@@ -20,8 +20,10 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ARG NEXT_PUBLIC_API_URL=/api
 ARG NEXT_PUBLIC_SITE_URL=http://localhost
+ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID=
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
-    NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+    NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
+    NEXT_PUBLIC_GOOGLE_CLIENT_ID=$NEXT_PUBLIC_GOOGLE_CLIENT_ID
 # PageProps/LayoutProps son tipos globales que Next genera en .next/types;
 # sin typegen previo el build falla en un checkout limpio (igual que en CI).
 RUN npm run typegen && npm run build

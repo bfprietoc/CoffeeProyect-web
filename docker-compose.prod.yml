@@ -23,6 +23,9 @@ services:
         NEXT_PUBLIC_API_URL: /api
         # metadataBase (OG/SEO): poner la URL pública real al desplegar.
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost}
+        # Login con Google (se hornea en el build; frontend + backend deben
+        # tener el mismo valor). Sin valor → el botón no se renderiza.
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}
     image: coffeeproyect-web
     restart: unless-stopped
     environment:
@@ -46,6 +49,9 @@ services:
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:?falta JWT_SECRET en .env (openssl rand -hex 32)}
       ADMIN_API_KEY: ${ADMIN_API_KEY:?falta ADMIN_API_KEY en .env}
+      # Login con Google: el backend valida el ID token del navegador contra
+      # Google (JWKS). Sin valor → login con Google desactivado.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
     expose:
       - "8080"
     depends_on:
