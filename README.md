@@ -20,6 +20,9 @@ credenciales, variables, pruebas y usuarios de prueba).
 
 Plan completo de features y fases: [FRONTEND_PLAN.md](./FRONTEND_PLAN.md).
 
+> 📖 **Guía manual completa (levantar todo a mano, endpoints, túneles):**
+> [MANUAL_GUIDE.md](./MANUAL_GUIDE.md)
+
 ## Stack
 
 - Next.js (App Router) + TypeScript
