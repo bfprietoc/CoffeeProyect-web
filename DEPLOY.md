@@ -1,9 +1,15 @@
 # DEPLOY.md — wake-agent (máquina de producción)
 
-> **Estado (2026-11-20): sitio desplegado y corriendo 24/7.**
+> **Estado (2026-11-27): sitio desplegado y corriendo 24/7 — v1.2.4 (web)
+> + v1.2.2 (backend).**
 > - Acceso privado (solo tailnet): **https://wake-agent.taile51409.ts.net**
-> - Pendiente: dominio propio + Cloudflare Tunnel para acceso público
->   (sección [Acceso público](#acceso-púbicopendiente-cloudflare-tunnel)).
+> - Google login ✅ + pagos Wompi sandbox ✅ (end-to-end verificado 2026-11-27)
+> - Túnel rápido (`cloudflared`) activo temporalmente para el webhook de
+>   Wompi — URL temporal (`*.trycloudflare.com`), NO es el acceso público
+>   permanente. Al terminar las pruebas: `systemctl --user stop
+>   coffee-tunnel`.
+> - Pendiente: dominio propio + Cloudflare Tunnel nombrado (sección
+>   [Acceso público](#acceso-púbicopendiente-cloudflare-tunnel)).
 >
 > El setup one-time ya se hizo (sección [Setup one-time](#setup-one-time-hecho-el-2026-11-20));
 > queda documentado para poder reconstruir la máquina desde cero.
