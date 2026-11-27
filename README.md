@@ -10,9 +10,11 @@ Frontend de [CoffeeProyect](https://github.com/bfprietoc/CoffeeProyect) — tien
 Wompi** (PSE + tarjetas).
 
 **Fase A (Google) ✅ CERRADA** — login real verificado 2026-11-26.
-**Pendiente del dueño:** activar el pago con credenciales reales de Wompi —
+**Fase B (Wompi) ✅ VALIDADA EN VIVO** — pago con tarjeta de prueba + webhook
+`POST /webhooks/wompi 200` → pedido `paid` (2026-11-27, Sandbox).
+**Pendiente del dueño:** activar el pago con credenciales de producción —
 está en [SETUP_GUIDE.md](./SETUP_GUIDE.md) (checklist B1–B7 + estado de
-branches). Wompi queda apagado (503) hasta que se completen.
+branches). Para probar en sandbox ver [MANUAL_GUIDE.md §4](./MANUAL_GUIDE.md).
 
 **¿Querés activar login con Google y pagos Wompi?** →
 [SETUP_GUIDE.md](./SETUP_GUIDE.md) (guía operativa unificada: checklist de

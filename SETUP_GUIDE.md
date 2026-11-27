@@ -131,18 +131,45 @@ Panel → **Desarrolladores → API keys** (nombres literales que espera el back
 
 ### B3. Configurar el webhook (solo dueño)
 
-Panel → **Desarrolladores → Webhooks**:
+Panel → **Desarrolladores → Webhooks** — **ambiente Sandbox** para pruebas:
 
-1. **URL del webhook:** `https://<host>/api/webhooks/wompi`
-   - Producción actual: `https://wake-agent.taile51409.ts.net/api/webhooks/wompi`
-   - Dev local: `/api/webhooks/wompi` a través del túnel de prueba (p. ej. `cloudflared`) — no se puede recibir desde localhost directo.
-   - Caddy quita el prefijo `/api` antes de reenviar → el backend recibe `POST /webhooks/wompi`.
+1. URL de eventos para el ambiente Sandbox. Para probar en local el backend corre
+   en `localhost:8080` — Wompi necesita una URL **pública** → se levanta un túnel
+   `cloudflared` temporal. Ver el detalle completo (modelo mental, pasos,
+   verificación, troubleshooting) en [MANUAL_GUIDE.md §4](./MANUAL_GUIDE.md#4-túneles-cloudflared--para-probar-pagoswebhooks-en-sandbox).
+   Resumen de lo mínimo:
+
+   ```bash
+   # 1. Arrancar túnel del backend (puerto 8080)
+   cd /tmp
+   nohup node node_modules/cloudflared/lib/cloudflared.js tunnel --url http://localhost:8080 \
+     > /tmp/tunnel-backend.log 2>&1 &
+   sleep 10
+   grep "trycloudflare" /tmp/tunnel-backend.log   # → https://<algo>.trycloudflare.com
+   ```
+
+   2. En el panel, activar **Modo de pruebas** (Sandbox) — sin esto Wompi no genera eventos.
+   3. URL de eventos para Sandbox:
+      ```
+      https://<algo>.trycloudflare.com/webhooks/wompi
+      ```
+      (Ambiente distinto a producción — la doc de Wompi exige URLs por ambiente.)
+   4. Verificar: `curl https://<algo>.trycloudflare.com/health` → 200
+   5. Pagar con tarjeta de prueba → pedido debe pasar a `paid` (webhook), no confiar
+      en la página de éxito. El túnel caduca en horas y cambia de URL — re-configurar
+      el webhook en cada arranque.
+
+   Para **producción**, la URL es `https://<host>/api/webhooks/wompi` (vía Caddy,
+   que quita el prefijo `/api` antes de reenviar). En dev, el frontend puede
+   quedar en `localhost:3001` — no necesita túnel.
 
 2. Backend `.env`:
 ```
 PUBLIC_BASE_URL=https://<host>     # URL pública del front (redirect del checkout)
 ```
    El redirect del checkout apunta a `${PUBLIC_BASE_URL}/orders/{id}?payment=1`.
+   En dev puede quedar **vacío** (omitir la línea) — Wompi muestra su propia
+   página de éxito. No bloquea el webhook (ese no depende de `PUBLIC_BASE_URL`).
 
 ### B4. Habilitar el botón (frontend)
 
@@ -208,7 +235,7 @@ Frontend refetchea el pedido (la API es la fuente de verdad, no el redirect)
 
 ---
 
-## 🧪 Estado actual del entorno de pruebas (2026-11-26)
+## 🧪 Estado actual del entorno de pruebas (2026-11-27)
 
 **Stack activo en local (in-memory, sin Docker — datos se pierden al reiniciar):**
 
@@ -223,7 +250,7 @@ Frontend refetchea el pedido (la API es la fuente de verdad, no el redirect)
 - **Cuenta del owner: creada a mano vía email+contraseña**, reconciliada con Google (mismo email → mismo `user.id`).
 - Restart de `coffee-api` (2026-11-26) limpió todo (clientes de prueba + datos) — cualquier cuenta de prueba se recrea en 30s.
 
-**Fase B (Wompi) pendiente:** cuenta sandbox + 3 credenciales (`WOMPI_PUBLIC_KEY`, `WOMPI_INTEGRITY_SECRET`, `WOMPI_EVENT_SECRET`) + `PUBLIC_BASE_URL` del dueño — paso B1 en adelante.
+**Fase B (Wompi) ✅ VALIDADA EN VIVO (2026-11-27):** modo de pruebas activado en el panel, webhook (Sandbox) configurado a través de túnel `cloudflared`, pago real con tarjeta de prueba → evento `transaction.updated` recibido y pedido `7328b811…` pasado a `paid` (transacción `12272149-1795801658-45863`). Backend: `POST /webhooks/wompi 200` + `payment_status=paid`. El túnel temporal, la URL de eventos del Sandbox y el modo de pruebas quedan como checklist de cada sesión de pruebas (ver MANUAL_GUIDE.md §4).
 
 **Bloqueado por el dueño:** cuenta Wompi (fase B), decisión de marca/dominio (fase C).
 
