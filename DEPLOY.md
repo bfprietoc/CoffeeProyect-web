@@ -137,6 +137,26 @@ nunca se versiona). Basado en `.env.production.example`:
 | `POSTGRES_PASSWORD` | 16 bytes aleatorios (hex) | Solo red interna de Docker |
 | `NEXT_PUBLIC_SITE_URL` | `https://wake-agent.taile51409.ts.net` | Se **hornea en el build** de la imagen web: al comprar el dominio, cambiarla y redeployar |
 
+### 4.1 Secretos opcionales (features)
+
+Se hornean/pasan solo si están definidos — las `NEXT_PUBLIC_*` se hornean en
+el build de la imagen web (y se copian al bundle: **no son secretos**), las
+del backend se leen en runtime.
+
+| Variable | Valor | Nota |
+|---|---|---|
+| `GOOGLE_CLIENT_ID` | `xxx.apps.googleusercontent.com` | Login con Google: backend valida el ID token vía JWKS |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | (mismo valor que arriba) | Se hornea en el build; sin ella el botón de Google no aparece |
+| `WOMPI_PUBLIC_KEY` | `pub_test_…` / `pub_prod_…` | Pagos Wompi (Web Checkout) — ver [Fase B](SETUP_GUIDE.md) |
+| `WOMPI_INTEGRITY_SECRET` | sandbox/producción | SOLO servidor; firma los pagos en checkout |
+| `WOMPI_EVENT_SECRET` | sandbox/producción | SOLO servidor; valida los webhooks |
+| `NEXT_PUBLIC_PAYMENTS_ENABLED` | `true` | Botón de pago visible en el front (se hornea) |
+| `PUBLIC_BASE_URL` | `https://wake-agent.taile51409.ts.net` | Redirect del checkout (opcional; si falta, Wompi muestra su página de éxito) |
+
+> Todas opcionales: sin ellas, el sitio funciona con email/login pero sin
+> botón de pago/login de Google (y el backend responde 503 con mensaje
+> amable). Ver [SETUP_GUIDE.md](./SETUP_GUIDE.md) para el setup completo.
+
 ### 5. Primer deploy + datos iniciales
 
 ```bash
