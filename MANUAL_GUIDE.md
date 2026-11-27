@@ -10,7 +10,8 @@
 > - Frontend: este repo (`CoffeeProyect-web`, Next.js :3001)
 >
 > **Estado del proyecto (2026-11-27):** v1.2.0 (web + backend) con Google login
-> validado en vivo (producción aprobada) y Wompi sandbox listo para validar.
+> validado en vivo (producción aprobada) y Wompi sandbox validado en vivo
+> (pago + webhook 200 → pedido `paid`, 2026-11-27).
 
 ---
 
@@ -190,50 +191,153 @@ Verificar: `curl -I http://localhost:3001/` → HTTP 200
 
 ---
 
-## 4. Túneles (cloudflared) — para probar pagos/webhooks desde local
+## 4. Túneles (cloudflared) — para probar pagos/webhooks en sandbox
 
-> **Esto NO es automático.** Los túneles son procesos largos que se levantan
-> manualmente y **expiran en horas** (quick tunnels). No hay hook que los active
-> al recibir una request — cuando mueren, la URL pública deja de responder.
+> **TL;DR:** el backend corre en tu máquina (`localhost:8080`). Wompi necesita
+> llamar a un endpoint **público** para notificarte cada pago — eso no funciona
+> desde localhost. El túnel es la única pieza que convierte tu máquina local en
+> una URL pública temporal. **Solo lo necesitás para los pagos en sandbox** —
+> el frontend y el pago en sí funcionan sin él.
 
-### 4.1 Cómo levantar un túnel a mano
+### 4.0 Qué es y por qué existe (el modelo mental)
 
-La instalación en esta máquina usa el binario `cloudflared` vía npm:
+```
+[Wompi] ── POST /webhooks/wompi ──► [Cloudflare] ──► [tu máquina → localhost:8080]
+              (HTTPS, desde internet)      (túnel saliente que TÚ abres)
+```
 
+- **El túnel NO lo abre Wompi.** Lo abres vos: es un proceso largo (en
+  background) que crea una conexión **saliente** desde tu máquina hacia
+  Cloudflare. Al hacerlo, Cloudflare te asigna una URL pública temporal
+  (`https://<algo>.trycloudflare.com`).
+- **La conexión es unidireccional y entrante:** Wompi hace un `POST` a esa URL
+  y Cloudflare lo reenvía a tu backend local. Nadie se conecta hacia afuera de
+  tu máquina — la conexión se inicia siempre desde vos hacia Cloudflare.
+- **NO es un tailscale/VPN entre Wompi y tu máquina.** No existe un vínculo
+  privado bilateral; el túnel es un "puente" público de una sola vía.
+- **NO es permanente:** los quick tunnels son temporales (horas) y cada vez que
+  levantás uno nuevo **cambia de URL**. Eso no es un bug — es el diseño de los
+  quick tunnels. (Para un túnel permanente con dominio, ver `DEPLOY.md`.)
+- **NO es automático:** no hay hook que lo levante. Si muere o expira, la URL
+  pública deja de responder y los webhooks se pierden hasta que lo relevenas.
+
+**Cuándo lo necesitás:** exclusivamente para que Wompi pueda **notificarte**
+(webhook) los pagos en el ambiente **Sandbox**. Todo lo demás funciona sin
+él:
+
+| Paso del flujo de pago | Necesita túnel |
+|---|---|
+| Browser → `checkout.wompi.co` y pagar con tarjeta | ❌ No — el browser navega directo a Wompi (internet) |
+| Backend → `/orders/{id}/payment` (firmar) | ❌ No — es localhost puro |
+| Wompi → webhook → backend → pedido `paid` | ✅ **SÍ** |
+
+**Qué pasa sin túnel:** podés pagar (el checkout y el pago en Wompi funcionan),
+pero el webhook nunca llega. La página de éxito de Wompi te dice que pagaste,
+pero **el backend nunca se entera** — el pedido queda `pending` para siempre.
+La fuente de verdad del pago es el webhook, nunca el redirect ni la página de
+éxito.
+
+### 4.1 Checklist completo para probar un pago en sandbox
+
+Hacé estos pasos en orden. La numeración coincide con el flujo de Wompi.
+
+**Paso 1 — Backend arriba**
+```bash
+systemctl --user start coffee-api   # o: go run main.go en ../CoffeeProyect
+curl http://localhost:8080/health   # → {"status":"ok"}
+```
+
+**Paso 2 — Túnel del backend**
 ```bash
 cd /tmp
 nohup node node_modules/cloudflared/lib/cloudflared.js tunnel --url http://localhost:8080 \
   > /tmp/tunnel-backend.log 2>&1 &
-nohup node node_modules/cloudflared/lib/cloudflared.js tunnel --url http://localhost:3001 \
-  > /tmp/tunnel-frontend.log 2>&1 &
-
-# Esperar ~10s y grep la URL
+sleep 10
 grep "trycloudflare" /tmp/tunnel-backend.log
+# → https://<algo>.trycloudflare.com   (anotá la URL — es la del túnel NUEVO)
+```
+> ⚠️ **Solo el backend necesita túnel.** El frontend queda en `localhost:3001`
+> (HTTP) y sigue hablando con `localhost:8080` sin problemas. NO levantes
+> túnel del frontend: introduciría mixed content y obligaría a rebuild del
+> front con `NEXT_PUBLIC_API_URL` = URL pública.
+
+**Paso 3 — Verificar el túnel**
+```bash
+# Health check a través del túnel (debe responder 200):
+curl -s -m 15 https://<algo>.trycloudflare.com/health
+# POST al webhook (vacío) → debe responder 401 = endpoint alcanzable
+curl -s -m 15 -o /dev/null -w "%{http_code}\n" -X POST \
+  https://<algo>.trycloudflare.com/webhooks/wompi \
+  -H "Content-Type: application/json" -d '{}'
 ```
 
-**Reglas importantes:**
-- **Frontend**: si el front viaja por el túnel (HTTPS), el backend DEBE estar
-  en una URL HTTPS alcanzable desde el browser — no se puede llamar `http://localhost:8080`
-  desde HTTPS (mixed content lo bloquea). El front se rebuilda con `NEXT_PUBLIC_API_URL`
-  = la URL del túnel del backend.
-- **Backend**: el webhook en Wompi apunta a `https://<tunnel-backend>/webhooks/wompi`
-  (producción: `https://<host>/api/webhooks/wompi` vía Caddy).
-- **Expiración**: los quick tunnels son temporales (~horas). Cuando caduquen:
-  - Los logs muestran `ERR Register tunnel error ... "Unauthorized: Tunnel not found"`
-  - El frontend (con la URL del túnel bakeada) deja de funcionar — **hay que rebuild** con
-    `NEXT_PUBLIC_API_URL` real y restart.
-- **Cómo matar el túnel**: `pkill -f "cloudflared tunnel"` (ojo: `pkill -f cloudflared`
-  mató el shell propio en una ocasión — usá el patrón más específico).
+**Paso 4 — Panel Wompi (solo dueño)**
+1. Desarrolladores → **Webhooks**
+2. Activar **Modo de pruebas** / ambiente **Sandbox**
+   (sin esto, Wompi no genera eventos — el debugger se queda vacío)
+3. URL de eventos para **Sandbox** (ambiente de prueba):
+   ```
+   https://<algo>.trycloudflare.com/webhooks/wompi
+   ```
+   > Ojo: ambiente distinto a producción. La doc de Wompi lo dice explícito —
+   > una URL de eventos diferente por ambiente.
 
-### 4.2 Alternativas
+**Paso 5 — Pagar con tarjeta de prueba**
+1. En `localhost:3001`, logueate (o usá el test user:
+   `pagos-test@coffeeproyect.test` / `Test1234!`)
+2. Abrir `/orders/{id}` → botón «Pagar con tarjeta o PSE»
+3. El form redirige a `checkout.wompi.co` → pagar con la **tarjeta de prueba**
+4. Wompi procesa → envía el webhook → backend valida checksum → pedido `paid`
+
+**Paso 6 — Verificar el resultado**
+```bash
+# 1. Logs del backend (debe aparecer la línea de éxito):
+journalctl --user -u coffee-api --since "-2 min" | grep wompi
+# → wompi webhook: order <id> payment_status=paid (transaction <tx>)
+# → POST /webhooks/wompi 200
+
+# 2. API (debe mostrar paid):
+TOKEN=$(curl -s -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"pagos-test@coffeeproyect.test","password":"Test1234!"}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['tokens']['access_token'])")
+curl -s http://localhost:8080/orders/<id> \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool | grep -E "payment_status|paid_at|updated_at"
+```
+
+**Paso 7 — Limpieza al terminar**
+```bash
+pkill -f "cloudflared tunnel"   # ojo: NO "pkill -f cloudflared" — mata el shell propio
+```
+El túnel no apunta a ningún dominio permanente; mata solo proceso local.
+
+### 4.2 qué pasa cuando el túnel expira o cae
+
+- El log muestra `ERR Register tunnel error ... "Unauthorized: Tunnel not found"`
+  o la URL simplemente deja de responder.
+- Wompi está reintentando el webhook contra la URL vieja (hasta 3 veces en 24h,
+  sin que nada llegue). **Nada llega a tu backend.**
+- Período típico de duración: **horas** (no es permanente).
+- **Re-levantar = nuevo túnel = nueva URL.** Tenés que re-escribir la URL del
+  webhook en el panel de Wompi. No se puede "renovar" el túnel viejo.
+
+### 4.3 Troubleshooting del túnel
+
+| Síntoma | Causa | Arreglo |
+|---|---|---|
+| `curl /health` del túnel → 000/timeout | Túnel caído o no llegó a estar arriba | Re-levantar (Paso 2). Verificar que el backend está arriba |
+| Health → 200, pero webhook no llega | URL de eventos en panel no apunta al túnel nuevo, o modo de pruebas desactivado | Paso 4 (panel) |
+| Health → 200, webhook llega → 401 | Checksum inválido (secreto evento/integrity mal o evento corrupto) | Verificar `WOMPI_EVENT_SECRET` en backend `.env` (debe coincidir con el panel) y que llega por HTTPS al túnel |
+| Pagé, pero el pedido quedó `pending` | Webhook nunca llegó (URL vieja/muerta o modo de pruebas desactivado) | Chequear debugger de Wompi: si no hay eventos, el ambiente está apagado |
+| Pago offline (sin túnel) pero el pedido no se actualiza | Es lo esperado sin túnel — ver "qué pasa sin túnel" arriba | Levantar túnel y re-pagar |
+
+### 4.4 Alternativas para acceso público
 
 | Opción | Cuándo |
 |---|---|
-| Túnel cloudflared (quick) | Probar pagos/webhooks hoy. Temporal |
-| Producción (wake-agent + tailnet) | Para flujos reales — sin túneles. Ver `DEPLOY.md` |
+| Túnel cloudflared quick (este doc) | Probar pagos en sandbox, temporal |
+| Producción (wake-agent + tailnet) | Flujos reales — sin túneles. Ver `DEPLOY.md` |
 | Localhost directo | Editar/debug del front — sin webhooks ni redirects HTTPS |
-
----
 
 ## 5. Endpoints — referencia
 
@@ -365,8 +469,10 @@ cd ../CoffeeProyect && go run main.go    # o systemctl --user start coffee-api
 npm run dev                              # hot-reload
 npm run build && systemctl --user start coffee-web   # producción local
 
-# Tunnel (backend)
-node /tmp/node_modules/cloudflared/lib/cloudflared.js tunnel --url http://localhost:8080
+# Tunnel (backend) — para webhooks en sandbox (ver §4)
+cd /tmp && nohup node node_modules/cloudflared/lib/cloudflared.js tunnel --url http://localhost:8080 > /tmp/tunnel-backend.log 2>&1 &
+grep "trycloudflare" /tmp/tunnel-backend.log
+pkill -f "cloudflared tunnel"   # matar (ojo: pattern específico)
 
 # Logs / estado
 journalctl --user -u coffee-api -n 50
