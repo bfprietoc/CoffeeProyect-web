@@ -4,11 +4,10 @@ Frontend de [CoffeeProyect](https://github.com/bfprietoc/CoffeeProyect) — tien
 
 ## Estado
 
-**Release `v1.2.3` en `main`** (2026-11-27) — `develop` = `main` en ambos repos.
-**Login con Google ✅** (verificado en vivo 2026-11-26 + cableado en producción
-wake-agent, 2026-11-27). **Pagos Wompi ✅** — pago con tarjeta de prueba + webhook
-`POST /webhooks/wompi 200` → pedido `paid` (2026-11-27, Sandbox).
-Ambas features mergeadas y en `main` + desplegadas en wake-agent.
+**Release `v1.2.4` en `main`** (2026-11-27) — `develop` = `main` en ambos repos.
+**Login con Google ✅** (verificado en vivo + cableado en producción wake-agent).
+**Pagos Wompi ✅** — checkout → webhook `POST /webhooks/wompi 200` → pedido `paid`
+(2026-11-27, Sandbox). Ambas features mergeadas y **desplegadas en wake-agent**.
 
 **Pendiente del dueño:** activar el pago con credenciales de producción —
 está en [SETUP_GUIDE.md](./SETUP_GUIDE.md) (checklist B1–B7 + estado de

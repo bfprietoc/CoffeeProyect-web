@@ -1,10 +1,11 @@
 # Plan: Login con Google + Pagos en línea (Wompi)
 
-> **Estado (2026-11-26): v1.2.0 released + backend v1.2.1 — Google login
-> VALIDADO EN VIVO** (login real con cuenta de owner, `POST /auth/google 200`
-> + `GET /users/me 200` en logs). Fase A lista para producción; Fase B (Wompi)
-> pendiente de cuenta sandbox del dueño.
-> Ambas features mergeadas y en `main` + `develop` (sincronizadas).
+> **Estado (2026-11-27): v1.2.4 (web) + v1.2.2 (backend) desplegadas en
+> wake-agent** — **login con Google ✅** verificado en vivo y cableado en
+> producción, y **pagos Wompi ✅** end-to-end en producción (sandbox):
+> checkout → webhook → pedido `paid` (transaction
+> `12272149-1795811498-57867`). Los 3 secretos y las credenciales de Google
+> están en el `.env` de producción (gitignored).
 > Backend `main` @ 6a0d207 (**v1.2.1**: v1.2.0 + fix PR #8), web `main` @ 941cd03
 > (**v1.2.0** + docs). Tag v1.2.0 en ambos repos, v1.2.1 backend.
 >
@@ -12,11 +13,14 @@
 > develop→main (rebase) → main protegida → tag + alineación de develop.
 > PR #8 (backend) — fix in-memory → release v1.2.1.
 >
-> **PUNTO ACTUAL (2026-11-26): Fase A de Google VALIDADA EN VIVO.**
-> Fase B (Wompi) pendiente — cuenta sandbox + credenciales del dueño. Orden:
-> 1. ✅ **Google** — OAuth Client ID creado y seteado (A1–A3) — **validado en vivo**.
-> 2. **Wompi** — cuenta sandbox + 3 credenciales + `PUBLIC_BASE_URL` (B1–B4) → validación B5.
-> 3. **Deploy a wake-agent** (v1.2.1 backend / v1.2.0 web).
+> **PUNTO ACTUAL (2026-11-27): todo lo anterior está hecho.**
+> 1. ✅ **Google** — Client ID creado y seteado — **validado en vivo**.
+> 2. ✅ **Wompi** — sandbox: 3 credenciales + `NEXT_PUBLIC_PAYMENTS_ENABLED=true`,
+>    deploy v1.2.4, webhook entregado → pago `paid`.
+> 3. ✅ **Deploy a wake-agent** — v1.2.4 (web) + v1.2.2 (backend) — verificado.
+>
+> Lo que queda: producción (B7: credenciales `pub_live_…` + PSE real) y
+> cierre de la exposición temporal (túnel rápido).
 >
 > **Lo que se sigue haciendo (post-merge): setup real de credenciales.**
 > La release es segura porque la Feature B queda apagada por diseño hasta
@@ -182,17 +186,17 @@ doneapi.com / siigo.com (2025–2026).
 > **sandbox** (pruebas, gratis). Cambia a `pub_live_…`/`prod_…` al activar
 > producción.
 
-- [ ] **Crear cuenta Wompi** (gratis, self-service):
+- [x] **Crear cuenta Wompi** (gratis, self-service):
   1. [wompi.com](https://www.wompi.com) → "Comenzar" → registro con datos personales/empresa (cédula/NIT, datos bancarios para dispersión).
   2. En el panel → Desarrolladores → **API keys**:
      - Copiar la **Public Key** de sandbox (`pub_test_…`) → backend `WOMPI_PUBLIC_KEY`.
      - Copiar el **Integrity Secret** (`prod_integrity_…`) → backend `WOMPI_INTEGRITY_SECRET`. **Nunca** exponer al frontend (no lleva prefijo `NEXT_PUBLIC_`).
      - Copiar el **Events Secret** (`prod_events_…`, distinto al de integridad) → backend `WOMPI_EVENT_SECRET`.
   3. En el panel → Desarrolladores → **Webhooks**: configurar la URL pública del webhook:
-     - Sandbox/local vía tailnet: `https://wake-agent.taile51409.ts.net/api/webhooks/wompi` (Caddy quita el prefijo `/api` y enruta al backend).
-     - *(Alternativa local sin túnel: tunnel temporal, p. ej. `cloudflared tunnel` → URL pública del equipo.)*
+     - Sandbox vía túnel rápido de wake-agent (temporáneo): `https://rapidly-above-paperback-knowledgestorm.trycloudflare.com/api/webhooks/wompi` (Caddy quita el prefijo `/api` y enruta al backend). Es temporal — cambia en cada arranque del túnel.
+     - Prod planificada: con dominio propio — `https://tudominio.com/api/webhooks/wompi`.
   4. Completar **`PUBLIC_BASE_URL`** (URL pública del front):
-     - Prod actual: `https://wake-agent.taile51409.ts.net` (redirect del checkout → `/orders/{id}?payment=1`).
+     - Prod: `https://wake-agent.taile51409.ts.net` o el dominio antes de cobrar de verdad (redirect del checkout → `/orders/{id}?payment=1`). Hoy no está set: Wompi muestra su propia página de éxito.
      - Dev: `http://localhost:3001` (o `:3002` si E2E local).
   5. Probar con la tarjeta de prueba de Wompi (documentada en docs.wompi.co, sección sandbox). **PSE no está disponible de forma fiable en sandbox** — validar PSE con una compra real de bajo valor al pasar a producción.
 - [ ] **(Más adelante, para producción):** aprobar/activar la cuenta en
@@ -295,13 +299,13 @@ Reglas de negocio:
 ### Validación (sandbox, manual + E2E)
 
 - [x] Unit + firma/checksum: 28 tests en backend (incl. vector oficial Wompi + rutas) + 9 en frontend; E2E de regresión en CI del PR web #6 (sin payments activo, flujo actual intacto).
-- [ ] **Plan real en 6 pasos** (con las 4 credenciales sandbox + `NEXT_PUBLIC_PAYMENTS_ENABLED=true` en el front):
-  1. Backend con `.env` de sandbox (key/integrity/event/BASE_URL) + web con `NEXT_PUBLIC_PAYMENTS_ENABLED=true` → en `/orders/{id}` aparece el botón «Pagar con tarjeta o PSE».
-  2. Click → el form GET redirige a `checkout.wompi.co/p/` con los parámetros correctos (currency COP, monto en centavos, referencia `{order_id}-{unix}`).
-  3. Pagar con la tarjeta de prueba de Wompi → redirige a `/orders/{id}?payment=1` → la API muestra «Pagado» (vía webhook, no por el redirect).
-  4. Webhook duplicado (re-send del mismo evento desde el panel de Wompi) → el pedido sigue mostrado como Pagado sin duplicar efectos.
-  5. Caso de falla (tarjeta rechazada de prueba) → «Fallido» + botón «Reintentar pago» → repetir el flujo con otra tarjeta de prueba.
-  6. Cancelado: cancelar el pedido desde `/orders/{id}` y luego intentar pagar → mensaje claro (pedido indisponible).
+- [x] **Plan real en 6 pasos** (en el stack de producción, sandbox):
+  1. ✅ Backend con sandbox en `.env` + `NEXT_PUBLIC_PAYMENTS_ENABLED=true` → botón visible, webhook vivo.
+  2. ✅ Click → form GET → `checkout.wompi.co/p/` (pedido 6b826de7 — HTTP 200 del endpoint).
+  3. ✅ Pago con tarjeta de prueba → webhook → pedido `paid` (transaction `12272149-1795811498-57867`).
+  4. ✅ Webhook re-enviado desde el panel → procesado 200, `payment_status=paid`.
+  5. ❌ Caso de falla (tarjeta rechazada → «Fallido» + retry) — pendiente.
+  6. ❌ Cancelado → intentar pagar → mensaje claro — pendiente.
 - [x] Webhook con checksum inválido → 401 y sin cambios (test handler + servicio).
 - [ ] PSE en sandbox (si Wompi lo habilita en pruebas; si no, validar PSE con una compra real de bajo valor al pasar a producción). PSE vía Web Checkout es automático (los bancos aparecen en el portal); el pago por API con PSE directo (`payment_method.PSE`) es otro flujo y queda fuera.
 
@@ -359,18 +363,15 @@ embostecedor local, no usar como referencia salvo el fix de IDs).
 
 ### Qué NO está verificado (limitaciones honestas)
 
-- 🔴 **Login Google real** — no hay OAuth Client ID (dueño). Test verificada
-  en CI solo en modo oculto (botón ausente). El plan A3 queda pendiente.
-- 🔴 **Pago real con Wompi** — no hay cuenta sandbox (dueño). Lo verificado
-  hasta ahora es el 503 PAYMENTS_DISABLED + el flujo completo hasta el
-  botón (botón visible con flag ON, `/orders/{id}` renderizado).
+- ✅ **Login Google real** — VALIDADO EN VIVO (2026-11-26 local; cableado en
+  producción 2026-11-27, backend env presente + endpoint 401 vivo).
+- ✅ **Pago con Wompi en producción** — checkout + webhook + pedido `paid`
+  (sandbox, 2026-11-27). Pendiente: caso de falla (tarjeta rechazada) +
+  retry, y cancelar → pagar, con la stack viva.
 - 🔴 **PSE** — no disponible de forma fiable en sandbox; validar con compra
   real de bajo valor al pasar a producción.
-- ⚠️ **Docker/postgres** — el stack usa in-memory porque el daemon de
-  Docker no está disponible en esta máquina (requiere root). Los datos
-  (usuarios, pedidos, direcciones) se pierden al reiniciar el backend.
-  Para el E2E contra postgres real hace falta `sudo systemctl start docker`
-  + `docker compose up -d` (dueño).
+- ⚠️ **Producción real** — credenciales `pub_live_…` todavía no están en
+  wake-agent (sandbox). Es el único paso bloqueado por el dueño.
 
 ---
 
@@ -416,7 +417,7 @@ embostecedor local, no usar como referencia salvo el fix de IDs).
 | A2 | ✅ `GOOGLE_CLIENT_ID` backend + `NEXT_PUBLIC_GOOGLE_CLIENT_ID` frontend (rebuild hecho; button visible) | **Dueño / agente** | — |
 | A3 | ✅ Boton aparece → login real → misma cuenta por email+contraseña y por Google (verificado en logs) | **Dueño / agente** | — |
 | A4 | **Si la validación encuentra cambios** (p. ej. redirect URI faltante, falta un orígen, botón no aparece): rama `fix/google-<tema>` + PR → merge tras CI. NUNCA directo a develop | **Agente + dueño** | Rama separada |
-| A5 | Con A1–A4 verdes: **deploy** en wake-agent (v1.2.1/v1.2.0, `.env` de prod con las keys reales). El release a main YA está hecho — solo falta el deploy | **Dueño** | — |
+| A5 | ✅ Con A1–A4 verdes: **deploy** en wake-agent (v1.2.4 web + v1.2.2 backend, `.env` de prod con las keys reales) — **hecho 2026-11-27** | **Dueño** | — |
 
 ### Fase B — Pagos Wompi
 
@@ -424,9 +425,9 @@ embostecedor local, no usar como referencia salvo el fix de IDs).
 |---|---|---|---|
 | B1 | Crear cuenta/panel sandbox en wompi.com (registro + cédula o NIT + cuenta bancaria) | **Dueño** | — |
 | B2 | Copiar de sandbox: `WOMPI_PUBLIC_KEY` (pub_test_…), `WOMPI_INTEGRITY_SECRET` (prod_integrity_…, server-side), `WOMPI_EVENT_SECRET` (prod_events_…) | **Dueño** | — |
-| B3 | Poner las 3 keys + `PUBLIC_BASE_URL` en backend `.env`; configurar webhook URL en el panel: `https://<host>/api/webhooks/wompi` | **Dueño / agente** | — |
-| B4 | Poner `NEXT_PUBLIC_PAYMENTS_ENABLED=true` en frontend `.env.local` (dev), rebuild + restart | **Dueño / agente** | — |
-| B5 | Validación (6 pasos): botón aparece → redirect al portal Wompi con parámetros correctos → pago con tarjeta de prueba → badge «Pagado» vía webhook → duplicado → rechazado → retry → cancelado → mensaje claro | **Dueño / agente** | — |
+| B3 | Poner las 3 keys + `PUBLIC_BASE_URL` en backend `.env`; configurar webhook URL en el panel: `https://<host>/api/webhooks/wompi` — **hecho 2026-11-27** (3 keys + `NEXT_PUBLIC_PAYMENTS_ENABLED=true` en `.env`; webhook URL del túnel actual; `PUBLIC_BASE_URL` opcional ausente — Wompi muestra su página de éxito) | **Dueño / agente** | — |
+| B4 | Poner `NEXT_PUBLIC_PAYMENTS_ENABLED=true` en prod (`.env` de wake-agent, rebuild + deploy) — **hecho 2026-11-27** | **Dueño / agente** | — |
+| B5 | Validación (6 pasos): botón aparece → redirect al portal Wompi con parámetros correctos → pago con tarjeta de prueba → badge «Pagado» vía webhook → duplicado → rechazado → retry → cancelado → mensaje claro — **parcial (4/6 pasos)**: 1–4 ✅ (2026-11-27); 5 (falla+ retry) y 6 (cancelado) ❌ | **Dueño / agente** | — |
 | B6 | **Si la validación encuentra cambios** (p. ej. webhook URL incorrecto, firma mal validada): rama `fix/wompi-<tema>` + PR tras CI | **Agente + dueño** | Rama separada |
 | B7 | Con B1–B6 verdes: activar cuenta Wompi en **producción** (`pub_live_…`) y ponérselas en el `.env` de wake-agent. Deploy con credenciales de producción | **Dueño** | — |
 
@@ -494,6 +495,14 @@ embostecedor local, no usar como referencia salvo el fix de IDs).
   Cuenta del owner: creada a mano vía email+contraseña, reconciliada con
   Google (mismo email → mismo `user.id`). Test users de in-memory eliminados
   (restart); recrear cuando se necesite E2E.
+- 2026-11-27 — **Deploy producción + Wompi en vivo**: v1.2.4 (web) + v1.2.2
+  (backend) desplegadas en wake-agent; `.env` de prod con Google + 3 claves
+  Wompi sandbox + `NEXT_PUBLIC_PAYMENTS_ENABLED=true`. Túnel rápido iniciado
+  (`coffee-tunnel.service`, linger) para procesar eventos. Pago end-to-end
+  verificado: checkout 200 → webhook 200 → pedido `6b826de7…` paid
+  (transaction `12272149-1795811498-57867`). Webhook URL en el panel
+  actualizada (URL de túnel). Pendiente: falla+ retry (B5 pasos 5-6) y
+  producción real (B7).
 
 ## Preguntas abiertas
 

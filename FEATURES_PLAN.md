@@ -1,14 +1,15 @@
 # Plan de funcionalidades — Ronda 1 (2026-11-20)
 
-> **Estado (2026-11-26): ítems 1 y 2 completados** (release `v1.1.0`) + **v1.2.0
+> **Estado (2026-11-27): ítems 1 y 2 completados** (release `v1.1.0`) + **v1.2.4
 > released** — login con Google (Feature A) y pagos Wompi (Feature B) mergeados
-> y en `main`/`develop` (backend #4+#6(#8), web #5+#6). **Fase A de Google
-> VALIDADA EN VIVO (2026-11-26)** — cuenta reconciliada (email+contraseña ↔
-> Google, mismo user.id). Fase B (Wompi) pendiente de credenciales del dueño. Setup real de credenciales
-> pendiente del dueño: detalle y paso a paso en
+> y en `main`/`develop`; desplegadas en wake-agent. **Fase A de Google
+> VALIDADA EN VIVO** (2026-11-26) y cableada en producción (2026-11-27).
+> **Fase B (Wompi) VALIDADA EN VIVO** (2026-11-27, sandbox) — checkout →
+> webhook → pedido `paid`. Pendiente: credenciales de producción (B7) +
+> dominio + cerrar el túnel temporal. Detalle paso a paso en
 > [AUTH_PAYMENTS_PLAN.md](./AUTH_PAYMENTS_PLAN.md) y
-> [SETUP_GUIDE.md](./SETUP_GUIDE.md). Pendientes: las ideas de features/estilos/
-> imágenes por llegar (sección "Pendientes").
+> [SETUP_GUIDE.md](./SETUP_GUIDE.md). Pendientes: las ideas de
+> features/estilos/imágenes por llegar (sección "Pendientes").
 >
 > Ronda de mejoras funcionales detectadas en la app desplegada (wake-agent,
 > release `v1.0.0`). Cada ítem: **estado verificado → cambio → validación**

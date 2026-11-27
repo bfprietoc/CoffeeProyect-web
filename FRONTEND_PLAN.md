@@ -94,10 +94,11 @@ ahí desde el **2026-11-20** (release `v1.0.0`), accesible en el tailnet en
 + Cloudflare Tunnel para acceso público. El `docker system prune` por deploy
 es obligatorio (lo hace `deploy.sh`) para no llenar el disco con imágenes.
 
-> **Estado (2026-11-22):** `v1.1.0` (ronda 1) está liberada y validada en
-> local en omarchy-x1 (E2E 18/18 contra el stack real); wake-agent sigue
-> en `v1.0.0` — el deploy queda pendiente (se prefiere validar en local
-> antes; el `.env` de la PC ya tiene la URL correcta).
+> **Estado (2026-11-27):** wake-agent corre **v1.2.4** (web) + **v1.2.2**
+> (backend) — login con Google activo y **pagos Wompi validados en vivo**
+> (sandbox): checkout → webhook → pedido `paid` (transaction
+> `12272149-1795811498-57867`). Backups en `backups/`. Verificado el
+> 2026-11-27.
 
 **Arquitectura (un solo Docker Compose en la mini PC):**
 
@@ -246,9 +247,9 @@ Free).
   `up -d --build` → caddy reload explícito → `docker system prune`.
   Backup nocturno por cron: opcional en la máquina de despliegue
   (el backup por deploy ya cubre los cambios de esquema/datos propios).
-- Tailscale en la mini PC + dispositivos; primer acceso real vía URL del
-  tailnet (o Cloudflare Tunnel + dominio para acceso público 24/7 — ver
-  Decisiones de despliegue, 2026-11-19)
+- ✅ Tailscale en la mini PC + dispositivos; acceso real vía URL del tailnet.
+  Para acceso público hay que elegir camino (ver Pendientes, más abajo):
+  dominio propio + tunnel nombrado (lo recomendado) o túnel temporal de test.
 
 ### Fase 7 — Ronda de funcionalidades (2026-11-20)
 
@@ -275,6 +276,25 @@ para poder aplicarla.
   quick add sin navegar, agotado deshabilitado [seed con stock 0], header →
   lista de pedidos, post-pedido la lista muestra el pedido, cuenta →
   pedidos). Release `v1.1.0` desplegada en wake-agent.
+
+## Pendientes (estado 2026-11-27)
+
+- [ ] **Dominio propio + tunnel permanente** (el pendiente grande):
+  dominio `.com` ~$11/año (Cloudflare Registrar) + tunnel nombrado de
+  Cloudflare (gratis) → URL estable `https://tudominio.com` + DNS en
+  Cloudflare. Hoy: tailnet + túnel temporal de test (`trycloudflare.com`,
+  URL cambia cada arranque — solo para probar pagos). Ver DEPLOY.md §
+  "Acceso público". Detalles: comprar dominio, `cloudflared tunnel
+  create <nombre>`, `route dns`, NEXT_PUBLIC_SITE_URL + webhook URL del
+  panel Wompi + origen de Google OAuth.
+- [ ] **Credenciales Wompi de producción** (`pub_live_…` / `prod_…`):
+  activar modo producción en el panel cuando se acepte cobrar de verdad
+  (no antes). Mientras tanto: sandbox (gratis, sin dinero de verdad).
+- [ ] **PSE verificado de verdad** — en sandbox no es fiable; validar con
+  una compra real de bajo valor al pasar a producción.
+- [ ] **Cerrar la exposición temporal**: parar el túnel rápido
+  (`systemctl --user stop coffee-tunnel`) o dejarlo solo para tests.
+- [ ] **Nombre de marca** (en Google consent screen + eventual dominio).
 
 ## Riesgos y notas
 
